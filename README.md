@@ -109,14 +109,19 @@ bit check used on macOS and Linux. If the page says **Setup required**, sign in
 to Codex again and reopen Grok Bot.
 
 When Codex is selected and no legacy Cursor/Grok Bot account is available, the
-Windows build opens **Grok Bot + Codex** directly. Type in **Message Codex** and
-press Enter or click **Send**. The **Test Codex connection** button performs a
-real request and should return `CODEX_APP_CONNECTED`.
+Windows build opens the reconstructed Grok Bot shell with Codex behind it. The
+standalone workspace uses the recovered sidebar, chat header, transcript,
+composer, and animated character renderer.
 
-This standalone path provides conversational Codex text turns and keeps the
-conversation context for the current window. The original Grok Bot remote
-computer, agent roster, plugins, and computer-use tools still require the
-upstream Cursor/Grok Bot service and are not available in standalone mode.
+Use **New** to create local bots. Each bot has its own persisted chat history,
+name, original Grok Bot shape, color, and custom instructions. Open
+**Customize** to change the character. Bots can also be renamed, duplicated,
+pinned, and deleted from the sidebar menu.
+
+The original Grok Bot remote computer, cloud roster, plugins, and computer-use
+tools still require the upstream Cursor/Grok Bot service and are not available
+in standalone mode. The computer button only reports the local Codex connection
+state in this build.
 
 **Usage & Billing** shows the locally recorded request and token totals for
 providers that return usage data. These figures are activity records, not an

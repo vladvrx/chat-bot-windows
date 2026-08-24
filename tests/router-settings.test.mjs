@@ -52,14 +52,17 @@ test("Router settings read and update the trusted backend provider", async () =>
 });
 
 test("local Codex chat is wired through the trusted desktop RPC", async () => {
-  const [renderer, preload, edge, rpc] = await Promise.all([
+  const [renderer, workspace, preload, edge, rpc] = await Promise.all([
     readFile(path.join(repoRoot, "frontend/src/production/ProductionRenderer.tsx"), "utf8"),
+    readFile(path.join(repoRoot, "frontend/src/production/LocalCodexWorkspace.tsx"), "utf8"),
     readFile(path.join(repoRoot, "source/electron-preload/preload.ts"), "utf8"),
     readFile(path.join(repoRoot, "source/electron-main/main-edge.ts"), "utf8"),
     readFile(path.join(repoRoot, "source/shared/rpc/main.ts"), "utf8"),
   ]);
-  assert.match(renderer, /Grok Bot \+ Codex/);
-  assert.match(renderer, /runLocalInferenceText\(next\)/);
+  assert.match(renderer, /<LocalCodexWorkspace bridge=\{bridge\}/);
+  assert.match(workspace, /ConversationSidebar/);
+  assert.match(workspace, /OnboardingCharacter/);
+  assert.match(workspace, /runLocalInferenceText\(/);
   assert.match(preload, /runLocalInferenceText: \(messages:/);
   assert.match(edge, /runLocalInferenceText: async \(raw\)/);
   assert.match(rpc, /runLocalInferenceText: \{ args: "object" \}/);

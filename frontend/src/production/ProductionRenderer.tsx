@@ -135,6 +135,7 @@ import { createStrictModeDisposalGuard, type StrictModeDisposable } from "./stri
 import { MessageReactionAction, ReactionPills } from "../recovered/features/conversation/cards/transcript-card/reaction-picker";
 import type { TranscriptMessageReactionSlotProps } from "../recovered/features/conversation/cards/transcript-card/message-actions";
 import { LocalToolPermissionDock, type LocalToolPermissionRequest } from "../recovered/features/permissions/local-tool/view";
+import { LocalCodexWorkspace } from "./LocalCodexWorkspace";
 import {
   parseDesktopIntent,
   projectRendererAgent,
@@ -620,52 +621,6 @@ function SignInLanding({ account, bridge, onStatus }: { account: CursorAuthStatu
 export interface ProductionRendererProps {
   bridge: DesktopBridge;
   coordinatorPort: CoordinatorPortBridge;
-}
-
-function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
-  const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
-  const [draft, setDraft] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const send = async (preset?: string) => {
-    const content = (preset ?? draft).trim();
-    if (content.length === 0 || busy) return;
-    const next = [...messages, { role: "user" as const, content }];
-    setMessages(next);
-    setDraft("");
-    setBusy(true);
-    setError(null);
-    try {
-      const result = await bridge.agent.runLocalInferenceText(next);
-      setMessages((current) => [...current, { role: "assistant", content: result.text }]);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason));
-    } finally {
-      setBusy(false);
-    }
-  };
-  return <div style={{ background: "#090909", boxSizing: "border-box", color: "#f4f4f4", display: "grid", gridTemplateRows: "minmax(0, 1fr) auto", height: "100%", paddingTop: 52, width: "100%" }}>
-    <main aria-label="Codex chat" style={{ margin: "0 auto", maxWidth: 820, overflow: "auto", padding: "32px 28px", width: "100%" }}>
-      <header style={{ borderBottom: "1px solid #272727", marginBottom: 28, paddingBottom: 20 }}>
-        <h1 style={{ fontSize: 24, margin: 0 }}>Grok Bot + Codex</h1>
-        <p style={{ color: "#9fd5a8", margin: "8px 0 0" }}>Connected to your existing ChatGPT sign-in</p>
-      </header>
-      {messages.length === 0 ? <div style={{ color: "#b8b8b8", padding: "56px 0", textAlign: "center" }}>
-        <h2 style={{ color: "#f4f4f4", fontSize: 20 }}>What can I help you with?</h2>
-        <p>This chat runs locally through the Codex route. No separate Grok Bot account is required.</p>
-        <button disabled={busy} onClick={() => void send("Reply with exactly CODEX_APP_CONNECTED")} style={{ background: "#202820", border: "1px solid #526752", borderRadius: 10, color: "#c9efc9", marginTop: 14, padding: "10px 16px" }} type="button">Test Codex connection</button>
-      </div> : messages.map((message, index) => <article key={index} style={{ background: message.role === "user" ? "#1d2a22" : "#171717", border: "1px solid #303030", borderRadius: 14, margin: "14px 0", marginLeft: message.role === "user" ? 70 : 0, padding: "14px 16px", whiteSpace: "pre-wrap" }}>
-        <strong style={{ color: message.role === "user" ? "#9fd5a8" : "#d0d0ff", display: "block", fontSize: 12, marginBottom: 7, textTransform: "uppercase" }}>{message.role === "user" ? "You" : "Codex"}</strong>
-        {message.content}
-      </article>)}
-      {busy ? <p aria-live="polite" style={{ color: "#aaa" }}>Codex is working…</p> : null}
-      {error == null ? null : <p role="alert" style={{ color: "#ff8b8b" }}>{error}</p>}
-    </main>
-    <form onSubmit={(event) => { event.preventDefault(); void send(); }} style={{ background: "#111", borderTop: "1px solid #292929", boxSizing: "border-box", display: "flex", gap: 12, height: 90, padding: 18 }}>
-      <textarea aria-label="Message Codex" autoFocus disabled={busy} onChange={(event) => setDraft(event.currentTarget.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void send(); } }} placeholder="Message Codex" rows={2} style={{ background: "#1b1b1b", border: "1px solid #3c3c3c", borderRadius: 12, color: "white", flex: 1, font: "inherit", height: 54, maxHeight: 54, minHeight: 54, padding: "12px 14px", resize: "none" }} value={draft} />
-      <button disabled={busy || draft.trim().length === 0} style={{ background: "#e7e7e7", border: 0, borderRadius: 12, color: "#111", fontWeight: 650, padding: "0 22px" }} type="submit">Send</button>
-    </form>
-  </div>;
 }
 
 export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRendererProps) {
