@@ -2,6 +2,8 @@ name: repository checks
 
 on:
   push:
+    branches:
+      - main
   pull_request:
 
 permissions:
@@ -13,6 +15,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: true
       - uses: actions/setup-node@v4
         with:
           node-version: 26.5.0
