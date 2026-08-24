@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent, type FormEvent, type ReactNode } from "react";
 import { COMPOSER_ATTACHMENT_LIMIT, attachmentBasename, formatAttachmentBytes, inferAttachmentKind, isComposerDraftEmpty, type ComposerDraft, type DraftAttachment } from "./model";
 import { useVoiceSession, VoiceWaveform, type VoiceTranscriber } from "./voice";
 import { ComposerReplyPill, replyComposerPlaceholder, type ComposerReplyTarget } from "./reply-preview";
@@ -45,6 +45,8 @@ export interface ConversationComposerProps {
   scopeKey?: string;
   acceptedSendGeneration?: number;
   sendButtonAppearance?: "default" | "chatgpt";
+  leadingAccessory?: ReactNode;
+  centerControl?: ReactNode;
 }
 
 function ChatGptSendGlyph() {
@@ -75,7 +77,7 @@ export function selectComposerFiles(files: readonly File[], existingCount: numbe
   return files.slice(0, remaining);
 }
 
-export function ConversationComposer({ acceptedSendGeneration = 0, draft, disabled = false, notice, placeholder = "Ask anything, or drop a file.", transcribeAudio, onChange, onClearReplyTarget, onRemoveAttachment, onStageFiles, onSubmit, replyTarget, editorProviders, scopeKey, sendButtonAppearance = "default" }: ConversationComposerProps) {
+export function ConversationComposer({ acceptedSendGeneration = 0, draft, disabled = false, notice, placeholder = "Ask anything, or drop a file.", transcribeAudio, onChange, onClearReplyTarget, onRemoveAttachment, onStageFiles, onSubmit, replyTarget, editorProviders, scopeKey, sendButtonAppearance = "default", leadingAccessory, centerControl }: ConversationComposerProps) {
   const fileInput = useRef<HTMLInputElement>(null);
   const editorControls = useRef<PromptEditorControls | null>(null);
   const dragDepth = useRef(0);
@@ -203,8 +205,12 @@ export function ConversationComposer({ acceptedSendGeneration = 0, draft, disabl
           scopeKey={scopeKey}
         />
         {voice.isRecording || voice.isActivating ? <span aria-live="polite" className="sand-prompt-voice-status" role="status">Listening…</span> : null}
-        <div className="sand-prompt-actions-row">
-          <SandIconButton aria-label="Attach file" className={PROMPT_ATTACH_CLASS} disabled={disabled || atLimit || voiceBusy} icon="plus" onClick={() => fileInput.current?.click()} shape="circle" size="lg" type="button" variant="default" />
+        <div className="sand-prompt-actions-row" data-has-center-control={centerControl == null ? undefined : true}>
+          <span className="sand-prompt-actions-leading">
+            <SandIconButton aria-label="Attach file" className={PROMPT_ATTACH_CLASS} disabled={disabled || atLimit || voiceBusy} icon="plus" onClick={() => fileInput.current?.click()} shape="circle" size="lg" type="button" variant="default" />
+            {leadingAccessory}
+          </span>
+          {centerControl == null ? null : <span className="sand-prompt-actions-center">{centerControl}</span>}
           <span className="sand-prompt-actions-trailing sand-prompt-cta-cluster sand-78zum5 sand-6s0dn4 sand-2lah0s">
             {voice.isRecording ? <button aria-label="Stop dictation" className={RECORDING_CHIP_CLASS} onClick={() => voice.handleStopClick()} onKeyDown={(event) => {
               if (event.key === "Escape") {

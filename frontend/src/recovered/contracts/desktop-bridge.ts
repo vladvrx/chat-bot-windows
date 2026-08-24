@@ -366,7 +366,8 @@ export interface AgentDesktopBridge {
   getAvailableModels(): Promise<unknown>;
   getInferenceRouter(): Promise<InferenceRouterState>;
   setInferenceRouter(provider: string): Promise<InferenceRouterState>;
-  runLocalInferenceText(messages: readonly LocalInferenceMessage[]): Promise<{ readonly text: string }>;
+  getLocalInferenceModel(): Promise<LocalInferenceModelSelection>;
+  runLocalInferenceText(messages: readonly LocalInferenceMessage[], model?: LocalInferenceModelSelection): Promise<{ readonly text: string }>;
   clientPersistence: {
     read(key: string): Promise<string | null>;
     write(key: string, value: string): Promise<void>;
@@ -385,6 +386,13 @@ export interface LocalInferenceProviderState {
 export interface LocalInferenceMessage {
   readonly role: "user" | "assistant";
   readonly content: string;
+}
+
+export type CodexReasoningEffort = "minimal" | "low" | "medium" | "high" | "xhigh";
+
+export interface LocalInferenceModelSelection {
+  readonly modelId: string;
+  readonly reasoningEffort?: CodexReasoningEffort;
 }
 
 export interface InferenceRouterState {

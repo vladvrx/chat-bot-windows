@@ -17,7 +17,7 @@ export const MAIN_METHOD_TABLE = {
   forceReconnectGateway: "none", getExperimentsSnapshot: "none", applyFeatureFlagOverride: "object", refreshFeatureFlags: "none",
   startRpcTraceWindow: "none", getAgentDefaultModel: "none", setAgentDefaultModel: "object", getComputerUseModel: "none",
   setComputerUseModel: "object", getHostPinnedAgents: "none", setHostPinnedAgents: "object", getHostSidebarSections: "none",
-  setHostSidebarSections: "object", getAvailableModels: "none", transcribeAudio: "object", getCursorAuthStatus: "none",
+  setHostSidebarSections: "object", getAvailableModels: "none", getLocalInferenceModel: "none", transcribeAudio: "object", getCursorAuthStatus: "none",
   loginCursor: "none", cancelCursorLogin: "none", logoutCursor: "none", updateCursorAccountName: "object",
   getCursorAvatar: "none", getCursorWeeklyUsage: "none", getCursorUsageSummary: "none", getCursorPrReviewPreferences: "none",
   getCursorPrivacyModeEnabled: "none", getSandAccess: "none", getSandAccessFresh: "none", invokeCursorDashboardAction: "object",

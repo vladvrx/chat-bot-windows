@@ -36,7 +36,7 @@ test("direct Codex Responses transport streams text without an SDK reader", asyn
     ], 5);
   };
   const events = [];
-  for await (const event of streamCodexDirectResponses({ fetch, endpoint: "https://example.invalid/responses", model: "gpt-test", instructions: "Grok", input: [{ role: "user", content: "hi" }] })) events.push(event);
+  for await (const event of streamCodexDirectResponses({ fetch, endpoint: "https://example.invalid/responses", model: "gpt-test", reasoningEffort: "high", instructions: "Grok", input: [{ role: "user", content: "hi" }] })) events.push(event);
   assert.deepEqual(events, [
     { type: "text-delta", delta: "DIRECT_" },
     { type: "text-delta", delta: "OK" },
@@ -45,6 +45,7 @@ test("direct Codex Responses transport streams text without an SDK reader", asyn
   assert.equal(requests.length, 1);
   assert.equal(requests[0].store, false);
   assert.equal(requests[0].stream, true);
+  assert.deepEqual(requests[0].reasoning, { effort: "high", summary: "auto" });
 });
 
 test("direct Codex Responses transport executes Grok Bot tools and continues with the exact call id", async () => {

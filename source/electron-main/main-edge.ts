@@ -10,7 +10,7 @@ import { isSandInferenceProvider } from "../shared/inference-router.js";
 import { getLocalInferenceCliStatus } from "../shared/node/inference-router-local.js";
 import { isSandBoxRuntime } from "../shared/box-runtime.js";
 import { getLocalDockerStatus, startLocalDockerBox, stopLocalDockerBox } from "./box/local-docker-host-connector.js";
-import { runRoutedProviderText } from "../host/extensions/inference/provider-session.js";
+import { getConfiguredCodexModelSelection, runRoutedProviderText, type CodexModelSelection, type CodexReasoningEffort } from "../host/extensions/inference/provider-session.js";
 
 export const MAIN_EDGE_UNSERVED = "main/unserved-method";
 export const MAIN_EDGE_UPDATE_UNAVAILABLE = "main/update-unavailable";
@@ -84,6 +84,17 @@ function parseAgentModel(value: unknown, requireNonWhitespaceId: boolean): { mod
   return { modelId: record.modelId, maxMode: record.maxMode, parameters };
 }
 
+const CODEX_MODEL_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/;
+const CODEX_REASONING_EFFORTS = new Set<CodexReasoningEffort>(["minimal", "low", "medium", "high", "xhigh"]);
+function parseCodexModelSelection(value: unknown): CodexModelSelection | undefined {
+  if (value == null) return undefined;
+  const model = req(value);
+  invariant(typeof model.modelId === "string" && CODEX_MODEL_ID_PATTERN.test(model.modelId), "The selected Codex model id is invalid.");
+  const reasoningEffort = model.reasoningEffort;
+  invariant(reasoningEffort === undefined || CODEX_REASONING_EFFORTS.has(reasoningEffort as CodexReasoningEffort), "The selected Codex reasoning effort is invalid.");
+  return { modelId: model.modelId, ...(reasoningEffort === undefined ? {} : { reasoningEffort: reasoningEffort as CodexReasoningEffort }) };
+}
+
 export function createMainEdgeHandlers(deps: MainEdgeDeps): HandlerMap {
   const handlers: HandlerMap = {
     getUpdateStatus: () => invoke(updateService(deps), "getStatus"),
@@ -115,6 +126,7 @@ export function createMainEdgeHandlers(deps: MainEdgeDeps): HandlerMap {
     getAvailableModels: () => deps.fetchAvailableModels(),
     getInferenceRouter: async () => { const settings = await deps.readHostSettingsFromBox().catch(() => ({} as UnknownRecord)); const provider = invoke(deps.settingsStore, "getInferenceProvider"); return { provider: isSandInferenceProvider(provider) ? provider : "cursor", usage: settings.inferenceRouterUsage ?? invoke(deps.settingsStore, "getInferenceRouterUsage") ?? null, local: getLocalInferenceCliStatus() }; },
     setInferenceRouter: async (raw) => { const provider = req(raw).provider; invariant(isSandInferenceProvider(provider), "Unknown inference provider."); invoke(deps.settingsStore, "setInferenceProvider", provider); const settings = await deps.syncHostSettingsToBox({ inferenceProvider: provider }).catch(() => null); return { provider, usage: settings?.inferenceRouterUsage ?? invoke(deps.settingsStore, "getInferenceRouterUsage") ?? null, local: getLocalInferenceCliStatus() }; },
+    getLocalInferenceModel: () => getConfiguredCodexModelSelection(),
     runLocalInferenceText: async (raw) => {
       const provider = invoke(deps.settingsStore, "getInferenceProvider");
       invariant(provider === "codex" || provider === "claude-code" || provider === "openrouter", "Select a local inference provider first.");
@@ -125,7 +137,8 @@ export function createMainEdgeHandlers(deps: MainEdgeDeps): HandlerMap {
         invariant((message.role === "user" || message.role === "assistant") && typeof message.content === "string" && message.content.length > 0 && message.content.length <= 100_000, "Local inference messages need a supported role and bounded text.");
         return { role: message.role, content: message.content };
       });
-      return { text: await runRoutedProviderText(provider, messages) };
+      const codexModel = provider === "codex" ? parseCodexModelSelection(req(raw).model) : undefined;
+      return { text: await runRoutedProviderText(provider, messages, codexModel == null ? undefined : { codexModel }) };
     },
     getBoxRuntime: async () => { const mode = invoke(deps.settingsStore, "getBoxRuntime"); invariant(isSandBoxRuntime(mode), "Unknown box runtime."); return { mode, status: await getLocalDockerStatus(String(Reflect.get(deps.settingsStore, "settingsPath"))) }; },
     setBoxRuntime: async (raw) => { const mode = req(raw).mode; invariant(isSandBoxRuntime(mode), "Unknown box runtime."); const settingsPath = String(Reflect.get(deps.settingsStore, "settingsPath")); invoke(deps.settingsStore, "setBoxRuntime", mode); try { if (mode === "local-docker") await startLocalDockerBox(settingsPath); else await stopLocalDockerBox(); } catch (error) { invoke(deps.settingsStore, "setBoxRuntime", mode === "local-docker" ? "remote" : "local-docker"); throw error; } invoke(deps.boxRecovery, "restartCoordinator"); return { mode, status: await getLocalDockerStatus(settingsPath) }; },

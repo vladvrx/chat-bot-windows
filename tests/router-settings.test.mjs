@@ -51,19 +51,29 @@ test("Router settings read and update the trusted backend provider", async () =>
   assert.doesNotMatch(source, /saveRouterProvider\(/);
 });
 
-test("local Codex chat is wired through the trusted desktop RPC", async () => {
-  const [renderer, workspace, preload, edge, rpc] = await Promise.all([
+test("local Codex chat and per-bot model choice are wired through the trusted desktop RPC", async () => {
+  const [renderer, workspace, preload, edge, rpc, provider] = await Promise.all([
     readFile(path.join(repoRoot, "frontend/src/production/ProductionRenderer.tsx"), "utf8"),
     readFile(path.join(repoRoot, "frontend/src/production/LocalCodexWorkspace.tsx"), "utf8"),
     readFile(path.join(repoRoot, "source/electron-preload/preload.ts"), "utf8"),
     readFile(path.join(repoRoot, "source/electron-main/main-edge.ts"), "utf8"),
     readFile(path.join(repoRoot, "source/shared/rpc/main.ts"), "utf8"),
+    readFile(path.join(repoRoot, "source/host/extensions/inference/provider-session.ts"), "utf8"),
   ]);
   assert.match(renderer, /<LocalCodexWorkspace bridge=\{bridge\}/);
   assert.match(workspace, /ConversationSidebar/);
   assert.match(workspace, /OnboardingCharacter/);
   assert.match(workspace, /runLocalInferenceText\(/);
+  assert.match(workspace, /LocalCodexModelSelector/);
+  assert.match(workspace, /modelId: activeAgent\.modelId, reasoningEffort: activeAgent\.reasoningEffort/);
+  assert.match(preload, /getLocalInferenceModel: \(\) => edge\("getLocalInferenceModel"\)/);
   assert.match(preload, /runLocalInferenceText: \(messages:/);
+  assert.match(preload, /\{ messages, model \}/);
+  assert.match(edge, /getLocalInferenceModel: \(\) => getConfiguredCodexModelSelection\(\)/);
   assert.match(edge, /runLocalInferenceText: async \(raw\)/);
+  assert.match(edge, /\{ codexModel \}/);
+  assert.match(rpc, /getLocalInferenceModel: \{ args: "none" \}/);
   assert.match(rpc, /runLocalInferenceText: \{ args: "object" \}/);
+  assert.match(provider, /selection\?\.modelId \?\? configured\.modelId/);
+  assert.match(provider, /options\?\.codexModel/);
 });

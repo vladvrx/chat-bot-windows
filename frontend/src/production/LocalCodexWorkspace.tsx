@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { DesktopBridge } from "../recovered/contracts/desktop-bridge";
+import type { CodexReasoningEffort, DesktopBridge, LocalInferenceModelSelection } from "../recovered/contracts/desktop-bridge";
 import { ConversationComposer } from "../recovered/features/conversation/workspace/composer";
 import { ConversationAgentHeader } from "../recovered/features/conversation/workspace/chat-header";
 import { ConversationSidebar, type SidebarAgent } from "../recovered/features/conversation/workspace/sidebar";
@@ -14,6 +14,35 @@ import "./local-codex-workspace.css";
 
 const STORE_KEY = "sand.local-codex.workspace.v2";
 const EMPTY_DRAFT: ComposerDraft = { prompt: "", attachments: [] };
+const FALLBACK_MODEL: LocalInferenceModelSelection & { readonly reasoningEffort: CodexReasoningEffort } = { modelId: "gpt-5.6-sol", reasoningEffort: "medium" };
+const CODEX_MODELS = [
+  { id: "gpt-5.6-sol", label: "5.6 Sol" },
+  { id: "gpt-5.6-terra", label: "5.6 Terra" },
+  { id: "gpt-5.6-luna", label: "5.6 Luna" },
+  { id: "gpt-5.5", label: "5.5" },
+  { id: "gpt-5.4", label: "5.4" },
+] as const;
+const REASONING_EFFORTS: readonly { readonly id: CodexReasoningEffort; readonly label: string }[] = [
+  { id: "minimal", label: "Minimal" },
+  { id: "low", label: "Low" },
+  { id: "medium", label: "Medium" },
+  { id: "high", label: "High" },
+  { id: "xhigh", label: "Extra high" },
+];
+
+function normalizeModelSelection(value: LocalInferenceModelSelection | null | undefined): LocalInferenceModelSelection & { readonly reasoningEffort: CodexReasoningEffort } {
+  const modelId = value?.modelId.trim();
+  return {
+    modelId: modelId == null || modelId.length === 0 ? FALLBACK_MODEL.modelId : modelId,
+    reasoningEffort: value?.reasoningEffort ?? FALLBACK_MODEL.reasoningEffort,
+  };
+}
+
+function modelLabel(modelId: string): string {
+  const known = CODEX_MODELS.find((model) => model.id === modelId);
+  if (known != null) return known.label;
+  return modelId.replace(/^gpt-/i, "").replace(/(^|[-_])([a-z])/g, (_match, separator: string, letter: string) => `${separator === "-" || separator === "_" ? " " : separator}${letter.toUpperCase()}`);
+}
 
 interface LocalCodexMessage {
   readonly id: string;
@@ -28,6 +57,8 @@ interface LocalCodexAgent {
   readonly avatarColor: string;
   readonly avatarShape: string;
   readonly instructions: string;
+  readonly modelId: string;
+  readonly reasoningEffort: CodexReasoningEffort;
   readonly messages: readonly LocalCodexMessage[];
   readonly updatedAt: number;
   readonly isPinned: boolean;
@@ -46,7 +77,7 @@ function createId(prefix: string): string {
   return `${prefix}-${value}`;
 }
 
-function createAgent(name = "Codex"): LocalCodexAgent {
+function createAgent(name = "Codex", model: LocalInferenceModelSelection = FALLBACK_MODEL): LocalCodexAgent {
   const id = createId("bot");
   return {
     id,
@@ -54,14 +85,15 @@ function createAgent(name = "Codex"): LocalCodexAgent {
     avatarColor: "green",
     avatarShape: "blob",
     instructions: "",
+    ...normalizeModelSelection(model),
     messages: [],
     updatedAt: Date.now(),
     isPinned: false
   };
 }
 
-function defaultStore(): LocalCodexStore {
-  const agent = createAgent();
+function defaultStore(model: LocalInferenceModelSelection = FALLBACK_MODEL): LocalCodexStore {
+  const agent = createAgent("Codex", model);
   return { version: 2, activeAgentId: agent.id, agents: [agent] };
 }
 
@@ -69,7 +101,7 @@ function isString(value: unknown): value is string {
   return typeof value === "string";
 }
 
-function parseStore(raw: string | null): LocalCodexStore | null {
+function parseStore(raw: string | null, defaultModel: LocalInferenceModelSelection = FALLBACK_MODEL): LocalCodexStore | null {
   if (raw == null) return null;
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
@@ -92,6 +124,10 @@ function parseStore(raw: string | null): LocalCodexStore | null {
         avatarColor: item.avatarColor,
         avatarShape: item.avatarShape,
         instructions: isString(item.instructions) ? item.instructions : "",
+        ...normalizeModelSelection({
+          modelId: isString(item.modelId) ? item.modelId : defaultModel.modelId,
+          reasoningEffort: REASONING_EFFORTS.some((effort) => effort.id === item.reasoningEffort) ? item.reasoningEffort as CodexReasoningEffort : defaultModel.reasoningEffort,
+        }),
         messages,
         updatedAt: typeof item.updatedAt === "number" ? item.updatedAt : Date.now(),
         isPinned: item.isPinned === true
@@ -140,6 +176,59 @@ function instructionPrefix(agent: LocalCodexAgent) {
     role: "user" as const,
     content: `You are ${agent.name}. Follow these custom instructions for this conversation:\n${instructions}`
   }];
+}
+
+function LocalCodexModelSelector({ disabled, modelId, reasoningEffort, onChange }: {
+  readonly disabled: boolean;
+  readonly modelId: string;
+  readonly reasoningEffort: CodexReasoningEffort;
+  readonly onChange: (selection: { readonly modelId: string; readonly reasoningEffort: CodexReasoningEffort }) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const models = CODEX_MODELS.some((model) => model.id === modelId)
+    ? CODEX_MODELS
+    : [{ id: modelId, label: modelLabel(modelId) }, ...CODEX_MODELS];
+
+  useEffect(() => {
+    if (!open) return;
+    const closeFromPointer = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const closeFromKeyboard = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", closeFromPointer);
+    document.addEventListener("keydown", closeFromKeyboard);
+    return () => {
+      document.removeEventListener("pointerdown", closeFromPointer);
+      document.removeEventListener("keydown", closeFromKeyboard);
+    };
+  }, [open]);
+
+  const effortLabel = REASONING_EFFORTS.find((effort) => effort.id === reasoningEffort)?.label ?? reasoningEffort;
+  return <div className="local-codex-model-selector" ref={rootRef}>
+    <button aria-expanded={open} aria-haspopup="dialog" className="local-codex-model-trigger" disabled={disabled} onClick={() => setOpen((value) => !value)} type="button">
+      <span>{modelLabel(modelId)} {effortLabel}</span>
+      <SandIcon name="chevron-down-small" size="xs" />
+    </button>
+    {open ? <div aria-label="Codex model and reasoning" className="local-codex-model-menu" role="dialog">
+      <section>
+        <strong>Model</strong>
+        <div role="listbox" aria-label="Model">
+          {models.map((model) => <button aria-selected={model.id === modelId} key={model.id} onClick={() => onChange({ modelId: model.id, reasoningEffort })} role="option" type="button">
+            <span>{model.label}</span>{model.id === modelId ? <SandIcon name="check" size="xs" /> : null}
+          </button>)}
+        </div>
+      </section>
+      <section>
+        <strong>Reasoning</strong>
+        <div className="local-codex-effort-options" role="listbox" aria-label="Reasoning effort">
+          {REASONING_EFFORTS.map((effort) => <button aria-selected={effort.id === reasoningEffort} key={effort.id} onClick={() => onChange({ modelId, reasoningEffort: effort.id })} role="option" type="button">{effort.label}</button>)}
+        </div>
+      </section>
+    </div> : null}
+  </div>;
 }
 
 function BotCustomizer({ agent, onChange, onClose }: { agent: LocalCodexAgent; onChange(patch: Partial<Pick<LocalCodexAgent, "name" | "avatarColor" | "avatarShape" | "instructions">>): void; onClose(): void }) {
@@ -191,6 +280,7 @@ function BotCustomizer({ agent, onChange, onClose }: { agent: LocalCodexAgent; o
 
 export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
   const [store, setStore] = useState<LocalCodexStore>(defaultStore);
+  const [machineDefaultModel, setMachineDefaultModel] = useState(FALLBACK_MODEL);
   const [loaded, setLoaded] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, ComposerDraft>>({});
   const [acceptedSendGeneration, setAcceptedSendGeneration] = useState(0);
@@ -203,9 +293,14 @@ export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
 
   useEffect(() => {
     let active = true;
-    void bridge.agent.clientPersistence.read(STORE_KEY).then((value) => {
+    void Promise.all([
+      bridge.agent.clientPersistence.read(STORE_KEY),
+      bridge.agent.getLocalInferenceModel().catch(() => FALLBACK_MODEL),
+    ]).then(([value, configuredModel]) => {
       if (!active) return;
-      setStore(parseStore(value) ?? defaultStore());
+      const model = normalizeModelSelection(configuredModel);
+      setMachineDefaultModel(model);
+      setStore(parseStore(value, model) ?? defaultStore(model));
       setLoaded(true);
     }).catch((reason) => {
       if (!active) return;
@@ -247,7 +342,7 @@ export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
 
   const createNewAgent = () => {
     const number = store.agents.length + 1;
-    const agent = createAgent(number === 1 ? "Codex" : `Bot ${number}`);
+    const agent = createAgent(number === 1 ? "Codex" : `Bot ${number}`, machineDefaultModel);
     setStore((current) => ({ ...current, activeAgentId: agent.id, agents: [agent, ...current.agents] }));
     setCustomizerOpen(true);
     setConnectionInfoOpen(false);
@@ -273,7 +368,7 @@ export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
     setStore((current) => {
       const remaining = current.agents.filter((agent) => agent.id !== agentId);
       if (remaining.length > 0) return { ...current, activeAgentId: current.activeAgentId === agentId ? remaining[0].id : current.activeAgentId, agents: remaining };
-      const replacement = createAgent();
+      const replacement = createAgent("Codex", machineDefaultModel);
       return { version: 2, activeAgentId: replacement.id, agents: [replacement] };
     });
     setDeleteTarget(null);
@@ -295,7 +390,7 @@ export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
       const result = await bridge.agent.runLocalInferenceText([
         ...instructionPrefix(activeAgent),
         ...requestMessages.map((message) => ({ role: message.role, content: message.content }))
-      ]);
+      ], { modelId: activeAgent.modelId, reasoningEffort: activeAgent.reasoningEffort });
       const assistantMessage: LocalCodexMessage = { id: createId("message"), role: "assistant", content: result.text, timestampMs: Date.now() };
       setStore((current) => ({
         ...current,
@@ -383,16 +478,22 @@ export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
             acceptedSendGeneration={acceptedSendGeneration}
             disabled={activeRunning}
             draft={draft}
+            leadingAccessory={<button aria-label="ChatGPT connection details" className="local-codex-trust-button" onClick={() => setConnectionInfoOpen((open) => !open)} title="ChatGPT connected" type="button"><SandIcon name="shield-check" size="sm" /></button>}
+            centerControl={<LocalCodexModelSelector
+              disabled={activeRunning}
+              modelId={activeAgent.modelId}
+              onChange={(selection) => updateAgent(activeAgent.id, selection)}
+              reasoningEffort={activeAgent.reasoningEffort}
+            />}
             notice={notice}
             onChange={(nextDraft) => setDrafts((current) => ({ ...current, [activeAgent.id]: nextDraft }))}
             onStageFiles={() => setNotice("Attachments are not available in the local Codex route yet.")}
             onSubmit={send}
-            placeholder={`Message ${activeAgent.name}`}
+            placeholder="Do anything"
             scopeKey={`local-codex:${activeAgent.id}`}
             sendButtonAppearance="chatgpt"
             transcribeAudio={(audio, mimeType, language) => bridge.transcribeAudio(audio, mimeType, language)}
           />
-          <div className="local-codex-composer-note">Codex uses your existing ChatGPT sign-in</div>
         </div>
       </section>
     </div>

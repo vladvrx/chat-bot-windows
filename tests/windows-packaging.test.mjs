@@ -48,6 +48,9 @@ test("Windows packaging uses the pinned runtime and a separate executable identi
   assert.match(config, /windowsUpstreamAsarSha256 = "38e85c0e5042c0257db7925e1e55709d6d155d90d92fe26ad654127d509766e0"/);
   assert.match(config, /windowsUpstreamShellSha256 = "86719c9dcbfc580b7bc29ece62302401a7622ae577e2cff42b4c525db674f1ca"/);
   assert.match(bootstrap, /sevenZipBin\.path7za/);
+  assert.match(packager, /buildFidelityReconstructedAsar/);
+  assert.match(packager, /build-frontend\.mjs/);
+  assert.match(packager, /windows-custom-renderer\.json/);
   assert.match(packager, /stripPeCertificate/);
   assert.match(packager, /await rcedit\(outputWindowsExecutable/);
   assert.match(verifier, /Reconstructed Windows executable still carries an Authenticode certificate payload/);

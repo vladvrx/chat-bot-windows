@@ -87,12 +87,85 @@
 .local-codex-empty h1 { margin: 18px 0 4px; font-size: 24px; font-weight: 620; letter-spacing: -.025em; }
 .local-codex-empty p { margin: 0 0 18px; color: var(--cursor-text-secondary); }
 
-.local-codex-composer-note {
-  margin-top: 6px;
-  color: var(--cursor-text-tertiary);
-  text-align: center;
-  font-size: 10px;
+.local-codex-shell .sand-chat-input-dock { padding-bottom: 12px; }
+.local-codex-shell .sand-prompt-shell { min-height: 100px; padding: 10px; border-radius: 20px; }
+.local-codex-shell .sand-prompt-field { min-height: 49px; padding: 5px 6px 0; }
+.local-codex-shell .sand-prompt-actions-row { min-height: 30px; }
+
+.local-codex-trust-button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: var(--cursor-icon-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  place-items: center;
 }
+
+.local-codex-trust-button:hover { color: var(--cursor-text-primary); background: var(--sand-fill-secondary); }
+
+.local-codex-model-selector { position: relative; }
+
+.local-codex-model-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 30px;
+  padding: 0 7px;
+  color: var(--cursor-text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 520;
+  white-space: nowrap;
+}
+
+.local-codex-model-trigger:hover:not(:disabled),
+.local-codex-model-trigger[aria-expanded="true"] { color: var(--cursor-text-primary); background: var(--sand-fill-secondary); }
+.local-codex-model-trigger:disabled { cursor: not-allowed; opacity: .55; }
+
+.local-codex-model-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 60;
+  display: grid;
+  width: 286px;
+  padding: 8px;
+  color: var(--cursor-text-primary);
+  background: var(--cursor-bg-elevated);
+  border: 1px solid var(--cursor-stroke-secondary);
+  border-radius: 14px;
+  box-shadow: 0 16px 44px #0008;
+  transform: translateX(-50%);
+}
+
+.local-codex-model-menu section { display: grid; gap: 5px; padding: 7px; }
+.local-codex-model-menu section + section { border-top: 1px solid var(--cursor-stroke-tertiary); }
+.local-codex-model-menu section > strong { color: var(--cursor-text-tertiary); font-size: 10px; font-weight: 620; text-transform: uppercase; letter-spacing: .055em; }
+.local-codex-model-menu section > div { display: grid; gap: 2px; }
+.local-codex-model-menu section > div > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 30px;
+  padding: 5px 8px;
+  color: var(--cursor-text-secondary);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  font-size: 12px;
+}
+
+.local-codex-model-menu section > div > button:hover,
+.local-codex-model-menu section > div > button[aria-selected="true"] { color: var(--cursor-text-primary); background: var(--sand-fill-secondary); }
+.local-codex-model-menu .local-codex-effort-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.local-codex-model-menu .local-codex-effort-options > button { justify-content: center; padding-inline: 5px; text-align: center; }
 
 .local-codex-shell .sand-prompt-send--chatgpt {
   display: grid;

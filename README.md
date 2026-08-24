@@ -102,11 +102,11 @@ tool execution across routed conversations.
 3. Confirm the Connection section says **Connected**. New turns now use Codex.
 
 Grok Bot reads the existing sign-in from `%USERPROFILE%\.codex\auth.json`; it
-does not ask for or store a separate API key. It also follows the model and
-reasoning effort in `%USERPROFILE%\.codex\config.toml`. On Windows, credential
-privacy is enforced by Windows ACLs, so the app does not apply the POSIX mode
-bit check used on macOS and Linux. If the page says **Setup required**, sign in
-to Codex again and reopen Grok Bot.
+does not ask for or store a separate API key. The model and reasoning effort in
+`%USERPROFILE%\.codex\config.toml` provide the initial defaults. On Windows,
+credential privacy is enforced by Windows ACLs, so the app does not apply the
+POSIX mode bit check used on macOS and Linux. If the page says **Setup
+required**, sign in to Codex again and reopen Grok Bot.
 
 When Codex is selected and no legacy Cursor/Grok Bot account is available, the
 Windows build opens the reconstructed Grok Bot shell with Codex behind it. The
@@ -117,6 +117,13 @@ Use **New** to create local bots. Each bot has its own persisted chat history,
 name, original Grok Bot shape, color, and custom instructions. Open
 **Customize** to change the character. Bots can also be renamed, duplicated,
 pinned, and deleted from the sidebar menu.
+
+Click the model label in the middle of the composer to choose a model and
+reasoning effort for the current bot. The selection is saved per bot and is
+sent with that bot's real Codex request. The current choices are 5.6 Sol,
+5.6 Terra, 5.6 Luna, 5.5, and 5.4, with Minimal through Extra high reasoning.
+Availability depends on the models enabled for the signed-in ChatGPT/Codex
+account.
 
 The original Grok Bot remote computer, cloud roster, plugins, and computer-use
 tools still require the upstream Cursor/Grok Bot service and are not available
@@ -187,9 +194,11 @@ bootstrap extracts the installer without executing it.
 
 `npm run package` compiles the reconstructed runtimes, applies the narrow
 renderer/settings transform, assigns a separate reconstructed identity, and
-verifies the result. macOS builds receive an ad-hoc signature. Windows builds
-remove the upstream Authenticode payload before writing reconstructed version
-metadata. Output is written to one of:
+verifies the result. The Windows package overlays the readable source-built
+frontend so the local Codex workspace and model picker are included in the
+executable. macOS builds receive an ad-hoc signature. Windows builds remove the
+upstream Authenticode payload before writing reconstructed version metadata.
+Output is written to one of:
 
 ```text
 dist/Grok Bot 0.18 Reconstructed.app

@@ -262,7 +262,8 @@ export function createDesktopPreloadBridge(options: {
       getAvailableModels: () => edge("getAvailableModels"),
       getInferenceRouter: () => edge("getInferenceRouter"),
       setInferenceRouter: (provider: string) => edge("setInferenceRouter", { provider }),
-      runLocalInferenceText: (messages: readonly unknown[]) => edge("runLocalInferenceText", { messages }),
+      getLocalInferenceModel: () => edge("getLocalInferenceModel"),
+      runLocalInferenceText: (messages: readonly unknown[], model?: unknown) => edge("runLocalInferenceText", { messages, model }),
       getBoxRuntime: () => edge("getBoxRuntime"),
       setBoxRuntime: (mode: string) => edge("setBoxRuntime", { mode }),
       clientPersistence: {

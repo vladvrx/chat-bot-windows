@@ -20,6 +20,8 @@ interface ProviderMessage extends LabelMessage { role: string; content: string |
 type RoutedProvider = Exclude<SandInferenceProvider, "cursor">;
 type UsageRecord = { inputTokens?: number; outputTokens?: number; cacheReadTokens?: number; cacheWriteTokens?: number };
 type RoutedToolExecutor = (tool: Loose, args: unknown, toolCallId: string) => Promise<unknown>;
+export type CodexReasoningEffort = "minimal" | "low" | "medium" | "high" | "xhigh";
+export interface CodexModelSelection { readonly modelId: string; readonly reasoningEffort?: CodexReasoningEffort }
 
 const GROK_ROUTER_SYSTEM_PROMPT = [
   "You are Grok Bot, a warm, concise desktop assistant.",
@@ -142,7 +144,7 @@ function configuredCodexModel(): string {
   } catch { return "gpt-5.4"; }
 }
 
-function configuredCodexReasoningEffort(): "minimal" | "low" | "medium" | "high" | "xhigh" | undefined {
+function configuredCodexReasoningEffort(): CodexReasoningEffort | undefined {
   const selected = process.env.SAND_CODEX_REASONING_EFFORT?.trim();
   if (selected === "minimal" || selected === "low" || selected === "medium" || selected === "high" || selected === "xhigh") return selected;
   try {
@@ -150,6 +152,14 @@ function configuredCodexReasoningEffort(): "minimal" | "low" | "medium" | "high"
     const value = /^\s*model_reasoning_effort\s*=\s*["']([^"']+)["']/m.exec(config)?.[1]?.trim();
     return value === "minimal" || value === "low" || value === "medium" || value === "high" || value === "xhigh" ? value : undefined;
   } catch { return undefined; }
+}
+
+export function getConfiguredCodexModelSelection(): CodexModelSelection {
+  const reasoningEffort = configuredCodexReasoningEffort();
+  return {
+    modelId: configuredCodexModel(),
+    ...(reasoningEffort == null ? {} : { reasoningEffort }),
+  };
 }
 
 function codexTools(definitions: readonly Loose[] | undefined): CodexDirectTool[] | undefined {
@@ -166,13 +176,15 @@ function codexTools(definitions: readonly Loose[] | undefined): CodexDirectTool[
   return tools.length === 0 ? undefined : tools;
 }
 
-function codexExecutor(messages: readonly ProviderMessage[], invocationId: string, definitions?: readonly Loose[], executeTool?: RoutedToolExecutor, onUsage?: (usage: UsageRecord) => void) {
+function codexExecutor(messages: readonly ProviderMessage[], invocationId: string, definitions?: readonly Loose[], executeTool?: RoutedToolExecutor, onUsage?: (usage: UsageRecord) => void, selection?: CodexModelSelection) {
   const credentials = codexCredentials();
   const usage = deferred<{ promptTokens: number; completionTokens: number; totalTokens: number }>();
   const extendedUsage = deferred<{ inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number; maxTokens: number }>();
   const resultResponse = deferred<ReturnType<typeof response>>();
   const metadata = deferred<Record<string, unknown>>();
-  const model = configuredCodexModel();
+  const configured = getConfiguredCodexModelSelection();
+  const model = selection?.modelId ?? configured.modelId;
+  const reasoningEffort = selection?.reasoningEffort ?? configured.reasoningEffort;
   const tools = codexTools(definitions);
   const fullStream = (async function* () {
     let text = "";
@@ -181,7 +193,7 @@ function codexExecutor(messages: readonly ProviderMessage[], invocationId: strin
         fetch: codexAuthenticatedFetch(credentials),
         endpoint: "https://chatgpt.com/backend-api/codex/responses",
         model,
-        ...(configuredCodexReasoningEffort() == null ? {} : { reasoningEffort: configuredCodexReasoningEffort()! }),
+        ...(reasoningEffort == null ? {} : { reasoningEffort }),
         instructions: GROK_ROUTER_SYSTEM_PROMPT,
         input: messages.map(message => ({ role: message.role === "assistant" ? "assistant" : "user", content: typeof message.content === "string" ? message.content : JSON.stringify(message.content) })),
         ...(tools == null ? {} : { tools }),
@@ -275,11 +287,12 @@ export async function runRoutedProviderText(provider: RoutedProvider, messages: 
   readonly tools?: readonly Loose[];
   readonly executeTool?: RoutedToolExecutor;
   readonly onTextDelta?: (delta: string, accumulated: string) => void;
+  readonly codexModel?: CodexModelSelection;
 }): Promise<string> {
   const invocationId = crypto.randomUUID();
   const onUsage = (usage: UsageRecord) => recordRoutedUsage(provider, usage);
   const result = provider === "codex"
-    ? codexExecutor(messages, invocationId, options?.tools, options?.executeTool, onUsage)
+    ? codexExecutor(messages, invocationId, options?.tools, options?.executeTool, onUsage, options?.codexModel)
     : provider === "claude-code"
       ? claudeExecutor(messages, invocationId, onUsage, options?.mcpServerUrl)
       : openRouterExecutor(messages, invocationId, options?.tools, options?.executeTool, onUsage);

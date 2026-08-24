@@ -74,10 +74,13 @@ export async function verifyReconstructedWindowsPackage({ packageRoot, executabl
     "dist/electron-preload/preload.cjs",
     "dist/node-agent-coordinator/main.cjs",
     "dist/renderer/index.html",
+    "dist/windows-custom-renderer.json",
     "dist/reconstruction-build.json",
     "dist/runtime-composition-audit.json",
     "dist/renderer-router-extension.json",
   ]) if (!entries.has(required)) throw new Error(`Packaged Windows ASAR is missing ${required}.`);
+  const rendererMarker = JSON.parse(extractFile(archive, "dist/windows-custom-renderer.json").toString("utf8"));
+  if (rendererMarker.renderer !== "frontend-source") throw new Error("Packaged Windows ASAR did not use the customizable source renderer.");
   const files = await walkFiles(packageRoot);
   if (files.some(file => file === "Grok Bot.exe")) throw new Error("The reconstructed package retained the official executable name.");
   return {

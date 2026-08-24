@@ -320,14 +320,17 @@
 .sand-prompt-attachment strong { overflow: hidden; text-overflow: ellipsis; font-size: 10px; white-space: nowrap; }
 .sand-prompt-attachment small { color: var(--cursor-text-tertiary); font-size: 9px; }
 .sand-prompt-actions-row { display: flex; align-items: center; justify-content: space-between; }
-.sand-prompt-actions-row > .sand-kit-icon-button.sand-prompt-attach { width: 30px; height: 30px; color: var(--cursor-icon-secondary); background: var(--sand-fill-secondary); border-radius: 50%; }
+.sand-prompt-actions-row[data-has-center-control="true"] { display: grid; grid-template-columns: minmax(72px, 1fr) auto minmax(72px, 1fr); }
+.sand-prompt-actions-leading { display: flex; align-items: center; justify-self: start; gap: 4px; }
+.sand-prompt-actions-center { min-width: 0; justify-self: center; }
+.sand-prompt-actions-row > .sand-prompt-actions-leading .sand-kit-icon-button.sand-prompt-attach { width: 30px; height: 30px; color: var(--cursor-icon-secondary); background: var(--sand-fill-secondary); border-radius: 50%; }
 .sand-prompt-actions-row > .sand-prompt-mic,
 .sand-prompt-actions-row > .sand-prompt-send { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; color: var(--cursor-icon-secondary); background: var(--sand-fill-secondary); border: 0; border-radius: 50%; cursor: pointer; }
 .sand-prompt-actions-row > .sand-prompt-send { color: var(--sand-text-on-color); background: var(--sand-fill-primary); }
 .sand-prompt-actions-row > .sand-prompt-mic:focus-visible,
 .sand-prompt-actions-row > .sand-prompt-send:focus-visible { outline: 1px solid var(--sand-border-accent); outline-offset: 1px; }
 .sand-prompt-actions-row button:disabled { cursor: not-allowed; opacity: .4; }
-.sand-prompt-actions-trailing { display: flex; gap: 6px; }
+.sand-prompt-actions-trailing { display: flex; justify-self: end; gap: 6px; }
 .sand-prompt-voice-error { margin: 8px 6px 0; color: var(--sand-text-danger); font-size: 10px; }
 .sand-prompt-voice-status { display: block; margin: 2px 6px 8px; color: var(--cursor-text-secondary); font-size: 10px; }
 .sand-prompt-voice-processing { display: inline-flex; align-items: center; min-height: 30px; padding: 0 10px; color: var(--cursor-text-secondary); background: var(--sand-fill-secondary); border-radius: 999px; font-size: 10px; }
