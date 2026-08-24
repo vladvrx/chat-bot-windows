@@ -1,6 +1,6 @@
 # Chat Bot 0.18 — reconstructed from Grok Bot 0.18 and extended
 
-![Grok Bot Router settings with Codex selected and local usage totals](docs/assets/router-settings.png)
+![Grok Bot Router settings with Codex selected and local usage totals](docs/chatbot.png)
 
 This repository is an unofficial, source-oriented reconstruction of the
 publicly shipped Grok Bot 0.18.0 macOS and Windows apps.
