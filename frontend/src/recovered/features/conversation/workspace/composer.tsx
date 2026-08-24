@@ -44,6 +44,13 @@ export interface ConversationComposerProps {
   editorProviders?: PromptEditorProviders;
   scopeKey?: string;
   acceptedSendGeneration?: number;
+  sendButtonAppearance?: "default" | "chatgpt";
+}
+
+function ChatGptSendGlyph() {
+  return <svg aria-hidden="true" height="18" viewBox="0 0 24 24" width="18">
+    <path d="M12 18V6m0 0-5 5m5-5 5 5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.15" />
+  </svg>;
 }
 
 export function extractClipboardFiles(items: DataTransferItemList | null | undefined): File[] {
@@ -68,7 +75,7 @@ export function selectComposerFiles(files: readonly File[], existingCount: numbe
   return files.slice(0, remaining);
 }
 
-export function ConversationComposer({ acceptedSendGeneration = 0, draft, disabled = false, notice, placeholder = "Ask anything, or drop a file.", transcribeAudio, onChange, onClearReplyTarget, onRemoveAttachment, onStageFiles, onSubmit, replyTarget, editorProviders, scopeKey }: ConversationComposerProps) {
+export function ConversationComposer({ acceptedSendGeneration = 0, draft, disabled = false, notice, placeholder = "Ask anything, or drop a file.", transcribeAudio, onChange, onClearReplyTarget, onRemoveAttachment, onStageFiles, onSubmit, replyTarget, editorProviders, scopeKey, sendButtonAppearance = "default" }: ConversationComposerProps) {
   const fileInput = useRef<HTMLInputElement>(null);
   const editorControls = useRef<PromptEditorControls | null>(null);
   const dragDepth = useRef(0);
@@ -208,7 +215,10 @@ export function ConversationComposer({ acceptedSendGeneration = 0, draft, disabl
               <span aria-hidden="true" className="sand-recording-chip__stop sand-1fsd2vl sand-170jfvy sand-2lah0s sand-1bl94mz sand-mak4db" />
               <span aria-hidden="true" className="sand-recording-chip__timer sand-2lah0s sand-fc7y3v sand-1yxxptd sand-1bignsj sand-ss6m8b">{voice.recordingDuration}</span>
               <span className="sand-recording-chip__waveform sand-1xp8n7a sand-18gnavp sand-2lah0s sand-78zum5 sand-6s0dn4"><VoiceWaveform stream={voice.stream} /></span>
-            </button> : voice.isProcessing ? <span aria-label="Transcribing voice input…" className="sand-prompt-voice-processing sand-2lah0s sand-16w9d4f sand-1th6cxs sand-78zum5 sand-6s0dn4 sand-l56j7k" role="status"><SandSpinner ariaLabel="Transcribing voice input…" size={18} />Transcribing…</span> : <>
+            </button> : voice.isProcessing ? <span aria-label="Transcribing voice input…" className="sand-prompt-voice-processing sand-2lah0s sand-16w9d4f sand-1th6cxs sand-78zum5 sand-6s0dn4 sand-l56j7k" role="status"><SandSpinner ariaLabel="Transcribing voice input…" size={18} />Transcribing…</span> : sendButtonAppearance === "chatgpt" ? <>
+              <SandIconButton aria-label="Start voice input" className={hasPayload ? PROMPT_MIC_PAYLOAD_CLASS : PROMPT_MIC_EMPTY_CLASS} disabled={disabled || voiceBusy} icon="mic" onClick={() => voice.handleMicClick()} shape="circle" size="lg" type="button" variant="default" />
+              <button aria-label="Send message" className={`${PROMPT_SEND_CLASS} sand-prompt-send--chatgpt`} disabled={!canSend} title="Send message" type="submit"><ChatGptSendGlyph /></button>
+            </> : <>
               {hasPayload ? <SandIconButton aria-label="Start voice input" className={PROMPT_MIC_PAYLOAD_CLASS} disabled={disabled || voiceBusy} icon="mic" onClick={() => voice.handleMicClick()} shape="circle" size="lg" type="button" variant="default" /> : null}
               {hasPayload ? <button aria-label="Send message" className={PROMPT_SEND_CLASS} disabled={!canSend} type="submit"><span className="sand-1n2onr6 sand-1kky2od sand-lup9mm"><ComposerGlyph hidden={hasPayload} name="mic" /><ComposerGlyph hidden={!hasPayload} name="arrow-up" /></span></button> : <SandIconButton aria-label="Start voice input" className={PROMPT_MIC_EMPTY_CLASS} disabled={disabled} icon="mic" onClick={() => voice.handleMicClick()} shape="circle" size="lg" type="button" variant="default" />}
             </>}

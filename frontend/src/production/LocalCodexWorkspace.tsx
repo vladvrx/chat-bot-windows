@@ -389,6 +389,7 @@ export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
             onSubmit={send}
             placeholder={`Message ${activeAgent.name}`}
             scopeKey={`local-codex:${activeAgent.id}`}
+            sendButtonAppearance="chatgpt"
             transcribeAudio={(audio, mimeType, language) => bridge.transcribeAudio(audio, mimeType, language)}
           />
           <div className="local-codex-composer-note">Codex uses your existing ChatGPT sign-in</div>

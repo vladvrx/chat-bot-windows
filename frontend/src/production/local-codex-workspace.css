@@ -94,6 +94,22 @@
   font-size: 10px;
 }
 
+.local-codex-shell .sand-prompt-send--chatgpt {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: #242424;
+  background: #f1f1f1;
+  border: 0;
+  border-radius: 50%;
+  opacity: 1;
+  place-items: center;
+}
+
+.local-codex-shell .sand-prompt-send--chatgpt:hover:not(:disabled) { background: #ffffff; }
+.local-codex-shell .sand-prompt-send--chatgpt:disabled { color: #777777; background: #3b3b3b; opacity: 1; }
+
 .local-codex-customizer {
   position: absolute;
   top: 51px;
