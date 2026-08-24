@@ -94,6 +94,30 @@ when their local clients are already authenticated. The application preserves
 streaming responses, thinking state, reactions, rich plugin mentions, and MCP
 tool execution across routed conversations.
 
+#### Codex setup on Windows
+
+1. Install Codex and sign in with ChatGPT. If needed, run `codex login` from a
+   terminal and finish the browser sign-in.
+2. Start Grok Bot, open **Settings → Router**, and select **Codex**.
+3. Confirm the Connection section says **Connected**. New turns now use Codex.
+
+Grok Bot reads the existing sign-in from `%USERPROFILE%\.codex\auth.json`; it
+does not ask for or store a separate API key. It also follows the model and
+reasoning effort in `%USERPROFILE%\.codex\config.toml`. On Windows, credential
+privacy is enforced by Windows ACLs, so the app does not apply the POSIX mode
+bit check used on macOS and Linux. If the page says **Setup required**, sign in
+to Codex again and reopen Grok Bot.
+
+When Codex is selected and no legacy Cursor/Grok Bot account is available, the
+Windows build opens **Grok Bot + Codex** directly. Type in **Message Codex** and
+press Enter or click **Send**. The **Test Codex connection** button performs a
+real request and should return `CODEX_APP_CONNECTED`.
+
+This standalone path provides conversational Codex text turns and keeps the
+conversation context for the current window. The original Grok Bot remote
+computer, agent roster, plugins, and computer-use tools still require the
+upstream Cursor/Grok Bot service and are not available in standalone mode.
+
 **Usage & Billing** shows the locally recorded request and token totals for
 providers that return usage data. These figures are activity records, not an
 authoritative provider invoice.

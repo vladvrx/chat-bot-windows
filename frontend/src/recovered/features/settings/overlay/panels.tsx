@@ -13,6 +13,7 @@ import { SandSelect } from "../../../ui/sand-floating-primitives";
 import { SandSwitch } from "../../../ui/sand-form-primitives";
 import { OverlayDialog } from "../../../ui/overlay-primitives";
 import { ROUTER_PROVIDERS, routerProviderById, type RouterProviderId } from "./router";
+import type { InferenceRouterState } from "../../../contracts/desktop-bridge";
 
 export type AccountState =
   | { kind: "logged-out"; errorMessage?: string }
@@ -461,11 +462,20 @@ export function UsageSettingsPanel({ meters = [], state, onRetry, onUpgrade, onC
 export interface RouterSettingsPanelProps {
   provider: RouterProviderId;
   pending?: boolean;
+  state?: InferenceRouterState | null;
   onChange(provider: RouterProviderId): void | Promise<unknown>;
 }
 
-export function RouterSettingsPanel({ provider, pending = false, onChange }: RouterSettingsPanelProps) {
+export function RouterSettingsPanel({ provider, pending = false, state = null, onChange }: RouterSettingsPanelProps) {
   const selectedProvider = routerProviderById(provider);
+  const local = provider === "codex" ? state?.local.codex : provider === "claude-code" ? state?.local["claude-code"] : null;
+  const connection = local == null
+    ? null
+    : local.authenticated
+      ? `${selectedProvider.label} is connected and ready.`
+      : local.installed
+        ? `${selectedProvider.label} was found but is not signed in. Run ${provider === "codex" ? "codex login" : "claude login"}, then reopen Grok Bot.`
+        : `${selectedProvider.label} is not installed or its login could not be found.`;
   return (
     <div className="sand-router-section">
       <SettingsGroup title="Provider">
@@ -486,6 +496,14 @@ export function RouterSettingsPanel({ provider, pending = false, onChange }: Rou
           />
         </label>
       </SettingsGroup>
+      {connection == null ? null : (
+        <SettingsGroup title="Connection">
+          <div className="sand-provider-usage-card" role="status">
+            <strong>{local?.authenticated ? "Connected" : "Setup required"}</strong>
+            <span>{connection}</span>
+          </div>
+        </SettingsGroup>
+      )}
       <SettingsGroup title="Usage">
         <div className="sand-provider-usage-card">
           <strong>{selectedProvider.label}</strong>

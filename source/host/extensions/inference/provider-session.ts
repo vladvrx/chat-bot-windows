@@ -67,7 +67,9 @@ type CodexCredentials = { accessToken: string; refreshToken: string; idToken: st
 function codexCredentials(): CodexCredentials {
   const path = join(process.env.CODEX_HOME?.trim() || join(homedir(), ".codex"), "auth.json");
   const stat = lstatSync(path);
-  if (!stat.isFile() || stat.isSymbolicLink() || (stat.mode & 0o077) !== 0) throw new Error("Codex login credentials must be a private direct regular file.");
+  if (!stat.isFile() || stat.isSymbolicLink() || (process.platform !== "win32" && (stat.mode & 0o077) !== 0)) {
+    throw new Error("Codex login credentials must be a private direct regular file.");
+  }
   const parsed = JSON.parse(readFileSync(path, "utf8")) as Loose;
   const accessToken = parsed?.tokens?.access_token;
   const refreshToken = parsed?.tokens?.refresh_token;

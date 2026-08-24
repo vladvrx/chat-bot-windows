@@ -43,3 +43,24 @@ test("settings registry exposes Router with the native settings icon contract", 
   const source = await readFile(path.join(repoRoot, "frontend/src/recovered/features/settings/overlay/view.tsx"), "utf8");
   assert.match(source, /\{ id: "router", label: "Router", icon: "git-branch" \}/);
 });
+
+test("Router settings read and update the trusted backend provider", async () => {
+  const source = await readFile(path.join(repoRoot, "frontend/src/recovered/features/settings/overlay/desktop-surface.tsx"), "utf8");
+  assert.match(source, /bridge\.agent\.getInferenceRouter\(\)/);
+  assert.match(source, /bridge\.agent\.setInferenceRouter\(provider\)/);
+  assert.doesNotMatch(source, /saveRouterProvider\(/);
+});
+
+test("local Codex chat is wired through the trusted desktop RPC", async () => {
+  const [renderer, preload, edge, rpc] = await Promise.all([
+    readFile(path.join(repoRoot, "frontend/src/production/ProductionRenderer.tsx"), "utf8"),
+    readFile(path.join(repoRoot, "source/electron-preload/preload.ts"), "utf8"),
+    readFile(path.join(repoRoot, "source/electron-main/main-edge.ts"), "utf8"),
+    readFile(path.join(repoRoot, "source/shared/rpc/main.ts"), "utf8"),
+  ]);
+  assert.match(renderer, /Grok Bot \+ Codex/);
+  assert.match(renderer, /runLocalInferenceText\(next\)/);
+  assert.match(preload, /runLocalInferenceText: \(messages:/);
+  assert.match(edge, /runLocalInferenceText: async \(raw\)/);
+  assert.match(rpc, /runLocalInferenceText: \{ args: "object" \}/);
+});

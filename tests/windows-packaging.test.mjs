@@ -67,3 +67,13 @@ test("Windows startup does not require macOS application-folder APIs", async () 
   const provider = await readFile(path.join(repositoryRoot, "source/electron-main/production-binding-providers.ts"), "utf8");
   assert.match(provider, /if \(platform === "darwin"\) \{\s*requireFunction\(ports\?\.app\?\.isInApplicationsFolder/);
 });
+
+test("Windows Codex login accepts ACL-protected files without POSIX mode bits", async () => {
+  const [providerSession, localRouter] = await Promise.all([
+    readFile(path.join(repositoryRoot, "source/host/extensions/inference/provider-session.ts"), "utf8"),
+    readFile(path.join(repositoryRoot, "source/shared/node/inference-router-local.ts"), "utf8"),
+  ]);
+  const windowsAwareModeCheck = /process\.platform !== "win32" && \(stat\.mode & 0o077\) !== 0/;
+  assert.match(providerSession, windowsAwareModeCheck);
+  assert.match(localRouter, windowsAwareModeCheck);
+});

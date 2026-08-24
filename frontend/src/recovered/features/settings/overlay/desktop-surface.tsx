@@ -30,7 +30,8 @@ import {
 } from "./desktop";
 import { GeneralSettingsPanel, RouterSettingsPanel, UpdatesSettingsPanel, UsageSettingsPanel } from "./panels";
 import { SettingsModalShell, type SettingsSectionId } from "./view";
-import { DEFAULT_ROUTER_PROVIDER, loadRouterProvider, saveRouterProvider, type RouterProviderId } from "./router";
+import { DEFAULT_ROUTER_PROVIDER, isRouterProviderId, type RouterProviderId } from "./router";
+import type { InferenceRouterState } from "../../../contracts/desktop-bridge";
 import type { AutoReviewSettings } from "./auto-review";
 import type { SettingsComputerMount } from "./computer";
 import { SettingsNoticeView, settingsNoticeFromEvent, type SettingsNotice } from "./notice";
@@ -58,6 +59,7 @@ export function SettingsDesktopSurface({ bridge, coordinatorClient = null, initi
   const [surfaceNotice, setSurfaceNotice] = useState<SettingsNotice | null>(null);
   const [cancelTrialDialogOpen, setCancelTrialDialogOpen] = useState(false);
   const [routerProvider, setRouterProvider] = useState<RouterProviderId>(DEFAULT_ROUTER_PROVIDER);
+  const [routerState, setRouterState] = useState<InferenceRouterState | null>(null);
   const [routerPending, setRouterPending] = useState(false);
   const handleCancelTrialDialogOpen = useCallback((open: boolean) => setCancelTrialDialogOpen(open), []);
   const handleNotice = useCallback((event: SettingsNoticeEvent) => {
@@ -136,8 +138,10 @@ export function SettingsDesktopSurface({ bridge, coordinatorClient = null, initi
   useEffect(() => {
     if (!isOpen) return;
     let active = true;
-    void loadRouterProvider(bridge.agent.clientPersistence).then((provider) => {
-      if (active) setRouterProvider(provider);
+    void bridge.agent.getInferenceRouter().then((state) => {
+      if (!active) return;
+      setRouterState(state);
+      setRouterProvider(isRouterProviderId(state.provider) ? state.provider : DEFAULT_ROUTER_PROVIDER);
     }).catch(() => {
       if (active) setRouterProvider(DEFAULT_ROUTER_PROVIDER);
     });
@@ -257,7 +261,9 @@ export function SettingsDesktopSurface({ bridge, coordinatorClient = null, initi
               setRouterProvider(provider);
               setRouterPending(true);
               try {
-                await saveRouterProvider(bridge.agent.clientPersistence, provider);
+                const state = await bridge.agent.setInferenceRouter(provider);
+                setRouterState(state);
+                setRouterProvider(isRouterProviderId(state.provider) ? state.provider : provider);
               } catch (reason) {
                 setRouterProvider(previous);
                 const message = reason instanceof Error ? reason.message : String(reason);
@@ -268,6 +274,7 @@ export function SettingsDesktopSurface({ bridge, coordinatorClient = null, initi
             }}
             pending={routerPending}
             provider={routerProvider}
+            state={routerState}
           />
         );
         return (

@@ -364,12 +364,35 @@ export interface AgentDesktopBridge {
   getComputerUseModel(): Promise<AgentModelSelection | null>;
   setComputerUseModel(model: AgentModelSelection | null): Promise<AgentModelSelection | null>;
   getAvailableModels(): Promise<unknown>;
+  getInferenceRouter(): Promise<InferenceRouterState>;
+  setInferenceRouter(provider: string): Promise<InferenceRouterState>;
+  runLocalInferenceText(messages: readonly LocalInferenceMessage[]): Promise<{ readonly text: string }>;
   clientPersistence: {
     read(key: string): Promise<string | null>;
     write(key: string, value: string): Promise<void>;
     remove(key: string): Promise<void>;
     listKeys(prefix: string): Promise<string[]>;
     migrateFromLocalStorage(entries: readonly ClientPersistenceEntry[]): Promise<boolean>;
+  };
+}
+
+export interface LocalInferenceProviderState {
+  readonly installed: boolean;
+  readonly authenticated: boolean;
+  readonly executablePath: string | null;
+}
+
+export interface LocalInferenceMessage {
+  readonly role: "user" | "assistant";
+  readonly content: string;
+}
+
+export interface InferenceRouterState {
+  readonly provider: string;
+  readonly usage: unknown;
+  readonly local: {
+    readonly codex: LocalInferenceProviderState;
+    readonly "claude-code": LocalInferenceProviderState;
   };
 }
 

@@ -44,6 +44,7 @@ import {
 } from "./coordinator-telemetry.js";
 import { createElectronDesktopConnectivity } from "./desktop-connectivity.js";
 import type { BoxConnectionInfo } from "../../shared/node/egress-tunnel/box-connection.js";
+import { getLocalInferenceCliStatus } from "../../shared/node/inference-router-local.js";
 
 export interface ProductionCoordinatorAuthStatus extends CoordinatorAuthStatus {
   readonly isAnysphereUser?: boolean;
@@ -478,10 +479,15 @@ export function createProductionCoordinatorAdapter<
           artifactPath,
         });
 
+      const localCodexStatus = (): Status | null => context.settings.settingsStore.getInferenceProvider() === "codex" && getLocalInferenceCliStatus().codex.authenticated
+        ? { kind: "logged-in", authId: "local|codex", email: "ChatGPT via Codex", isAnysphereUser: false } as Status
+        : null;
+      const effectiveStatus = (status: Status): Status => localCodexStatus() ?? status;
       const accountRuntime = createCoordinatorAccountRuntime<Status>({
         createRuntime,
-        authorizeAccount: (slot, transition) =>
-          ports.account.authorizeAccount(slot, transition, context),
+        authorizeAccount: (slot, transition) => slot === "local|codex"
+          ? Promise.resolve(true)
+          : ports.account.authorizeAccount(slot, transition, context),
         revokeRefusedAccount: () => ports.account.revokeRefusedAccount(context),
         prepareAccountTransition: (transition) => {
           context.accountLifecycle.beginTransition();
@@ -503,7 +509,7 @@ export function createProductionCoordinatorAdapter<
           void accountService.getStatus().then(
             (status) => {
               if (disposed || sequence !== observationSequence) return;
-              accountRuntime.observe(status as Status);
+              accountRuntime.observe(effectiveStatus(status as Status));
             },
             (error) =>
               ports.reportFailure("coordinator-account", "status-refresh", error),
@@ -523,7 +529,7 @@ export function createProductionCoordinatorAdapter<
       }
 
       return {
-        start: (status) => accountRuntime.start(status as Status),
+        start: (status) => accountRuntime.start(effectiveStatus(status as Status)),
         getAccountRuntime: () => active,
         restartCoordinator: () => { void active?.restart(); },
         getTelemetryReportPipes: () => ({

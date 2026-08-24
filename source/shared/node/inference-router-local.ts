@@ -30,7 +30,7 @@ export function resolveClaudeCodeCliPath(): string | null {
 function hasUsableCodexLogin(path: string): boolean {
   try {
     const stat = lstatSync(path);
-    if (!stat.isFile() || stat.isSymbolicLink() || (stat.mode & 0o077) !== 0) return false;
+    if (!stat.isFile() || stat.isSymbolicLink() || (process.platform !== "win32" && (stat.mode & 0o077) !== 0)) return false;
     const parsed = JSON.parse(readFileSync(path, "utf8")) as Record<string, any>;
     return parsed.auth_mode === "chatgpt"
       && typeof parsed.tokens?.access_token === "string" && parsed.tokens.access_token.length > 0
