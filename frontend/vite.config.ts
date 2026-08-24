@@ -7,6 +7,7 @@ import { defineConfig } from "vite";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const upstreamRenderer = path.resolve(here, "../src/app/dist/renderer");
+const frontendBuildOutput = process.env.GROK_FRONTEND_OUT_DIR ?? path.resolve(here, "../.build/frontend-shell");
 const controlPort = process.env.SAND_DEV_CONTROL_PORT ?? "62150";
 let rendererHealth: unknown = null;
 
@@ -80,7 +81,7 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: path.resolve(here, "../.build/frontend-shell"),
+    outDir: frontendBuildOutput,
     emptyOutDir: true,
     sourcemap: true
   }

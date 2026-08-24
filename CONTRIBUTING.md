@@ -18,6 +18,15 @@ npm run package
 npm run verify
 ```
 
+On Windows x64, run:
+
+```powershell
+npm run bootstrap
+npm run package:windows
+npm run verify:windows
+npm run smoke:windows
+```
+
 Use focused commits. Explain whether a change affects reviewed runtime source,
 the editable frontend, the checksum-pinned packaged renderer, or packaging only.
 Do not weaken checksum, bundle identity, code-signing, or clean-export checks to

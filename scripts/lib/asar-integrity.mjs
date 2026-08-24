@@ -49,9 +49,10 @@ function snapshotDiff(before, after) {
 async function archiveFileEntries(archivePath) {
   const entries = new Map();
   for (const raw of listPackage(archivePath)) {
-    const relative = raw.replace(/^\//, "");
+    const relative = raw.replace(/^[/\\]/, "").split(path.sep).join("/");
+    const archiveRelative = relative.split("/").join(path.sep);
     try {
-      const entry = statFile(archivePath, relative);
+      const entry = statFile(archivePath, archiveRelative);
       if (typeof entry.size === "number") entries.set(relative, entry);
     } catch {
       // listPackage includes directories; statFile is the file boundary.

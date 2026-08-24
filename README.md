@@ -3,7 +3,7 @@
 ![Grok Bot Router settings with Codex selected and local usage totals](docs/assets/router-settings.png)
 
 This repository is an unofficial, source-oriented reconstruction of the
-publicly shipped Grok Bot 0.18.0 macOS app.
+publicly shipped Grok Bot 0.18.0 macOS and Windows apps.
 
 The project began as an attempt to understand how the desktop app was put
 together. It now contains readable TypeScript implementations of its Electron,
@@ -117,10 +117,10 @@ Remote mode remains the default.
 
 ## Requirements
 
-- macOS on Apple Silicon
+- macOS on Apple Silicon, or Windows 10/11 on x64
 - Node.js 26.5.x
-- Xcode Command Line Tools
 - Git LFS
+- Xcode Command Line Tools on macOS
 - Docker Desktop (optional, only for the local sandbox)
 - local Claude Code or Codex authentication for those router choices
 
@@ -135,21 +135,36 @@ npm ci
 npm run bootstrap
 npm run check
 npm run package
+```
+
+On macOS, launch:
+
+```sh
 open "dist/Grok Bot 0.18 Reconstructed.app"
 ```
 
-`npm run bootstrap` first uses the Git LFS preservation copy of the pinned
-0.18.0 DMG. If that archive is absent, it falls back to the original public URL;
+On Windows, launch:
+
+```powershell
+& ".\dist\Grok Bot 0.18 Reconstructed-win32-x64\Grok Bot 0.18 Reconstructed.exe"
+```
+
+`npm run bootstrap` first uses the Git LFS preservation copy for the current
+platform. If that archive is absent, it falls back to the original public URL.
 `GROK_BOT_018_APP` can also point to an existing application copy. Bootstrap
-verifies both the DMG and `app.asar`, caches the matching Electron runtime, and
-hydrates the ignored `src/app/dist` build input.
+verifies the installer and platform-specific `app.asar`, caches the matching
+Electron runtime, and hydrates the ignored `src/app/dist` build input. Windows
+bootstrap extracts the installer without executing it.
 
 `npm run package` compiles the reconstructed runtimes, applies the narrow
-renderer/settings transform, creates the app bundle, assigns the reconstructed
-bundle identity, ad-hoc signs it, and verifies the result. Output is written to:
+renderer/settings transform, assigns a separate reconstructed identity, and
+verifies the result. macOS builds receive an ad-hoc signature. Windows builds
+remove the upstream Authenticode payload before writing reconstructed version
+metadata. Output is written to one of:
 
 ```text
 dist/Grok Bot 0.18 Reconstructed.app
+dist/Grok Bot 0.18 Reconstructed-win32-x64/Grok Bot 0.18 Reconstructed.exe
 ```
 
 Reconstructed packages disable the upstream updater at the packaging boundary
@@ -203,8 +218,10 @@ npm test                  # focused regression tests
 npm run typecheck         # renderer TypeScript
 npm run source:typecheck  # runtime TypeScript
 npm run frontend:build    # build the readable renderer reconstruction
-npm run package           # build, sign, and verify the macOS app
+npm run package           # build and verify the current platform's app
+npm run package:windows   # build and verify the portable Windows app
 npm run verify            # verify an existing packaged app
+npm run smoke:windows     # load required native modules with packaged Electron
 npm run smoke             # bounded native smoke check
 npm run publication:check # prove a fresh-history export is lossless
 ```
@@ -216,9 +233,9 @@ Generated directories including `.cache`, `.build`, `dist`, `src/app/dist`,
 
 The app launches and the core reconstructed flows are usable, including routed
 inference, connected plugins, and the local Docker sandbox. This is still an
-experimental reconstruction: it targets one pinned macOS/arm64 release, depends
-on external provider sessions, and does not promise compatibility with future
-Grok Bot versions.
+experimental reconstruction: it targets the pinned macOS/arm64 and Windows/x64
+0.18.0 releases, depends on external provider sessions, and does not promise
+compatibility with future Grok Bot versions.
 
 For changes, read [CONTRIBUTING.md](CONTRIBUTING.md). For the clean-history
 export procedure, see [docs/PUBLISHING.md](docs/PUBLISHING.md). Technical

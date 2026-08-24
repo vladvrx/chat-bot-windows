@@ -3,7 +3,7 @@
   "version": "0.18.0-reconstructed.1",
   "private": true,
   "type": "module",
-  "description": "Source-oriented reconstruction of the publicly shipped Grok Bot 0.18.0 macOS application",
+  "description": "Source-oriented reconstruction of the publicly shipped Grok Bot 0.18.0 desktop application",
   "engines": {
     "node": ">=26.5.0 <27"
   },
@@ -11,19 +11,24 @@
     "bootstrap": "node scripts/bootstrap-runtime.mjs",
     "build": "node scripts/build.mjs",
     "check": "npm run typecheck && npm run source:typecheck && npm test",
-    "frontend:build": "vite build --config frontend/vite.config.ts",
+    "frontend:build": "node scripts/build-frontend.mjs",
     "frontend:recover": "node scripts/recover-frontend.mjs",
     "native:patch": "node scripts/apply-third-party-patches.mjs",
     "native:build:electron": "node scripts/build-tree-sitter-electron.mjs",
-    "package": "npm run check && node scripts/package-macos.mjs",
+    "package": "npm run check && node scripts/package.mjs",
+    "package:macos": "npm run check && node scripts/package-macos.mjs",
+    "package:windows": "npm run check && node scripts/package-windows.mjs",
     "package:diagnostic": "npm run check && node scripts/package-fidelity-diagnostic.mjs",
     "publication:check": "node scripts/verify-publication-tree.mjs",
     "postinstall": "node scripts/apply-third-party-patches.mjs",
     "smoke": "node scripts/smoke.mjs",
+    "smoke:windows": "node scripts/smoke-windows.mjs",
     "test": "node --test tests/*.test.mjs",
     "typecheck": "tsc --project frontend/tsconfig.json",
     "source:typecheck": "tsc --project source/tsconfig.json",
-    "verify": "node scripts/verify.mjs"
+    "verify": "node scripts/verify-package.mjs",
+    "verify:macos": "node scripts/verify.mjs",
+    "verify:windows": "node scripts/verify-windows.mjs"
   },
   "devDependencies": {
     "@electron/asar": "4.2.1",
@@ -32,6 +37,7 @@
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
     "@vitejs/plugin-react": "6.0.5",
+    "7zip-bin": "5.2.0",
     "acorn": "8.18.0",
     "acorn-walk": "8.3.5",
     "electron": "42.1.0",
@@ -39,6 +45,7 @@
     "node-addon-api": "8.5.0",
     "node-gyp": "12.1.0",
     "node-gyp-build": "4.8.4",
+    "rcedit": "5.0.2",
     "sirv": "3.0.2",
     "typescript": "7.0.2",
     "vite": "8.2.1"

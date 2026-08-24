@@ -5,8 +5,8 @@ import path from "node:path";
 import { capture, run } from "./lib/process.mjs";
 import { repoRoot } from "./lib/config.mjs";
 
-const git = "/usr/bin/git";
-const tar = "/usr/bin/tar";
+const git = process.platform === "win32" ? "git" : "/usr/bin/git";
+const tar = process.platform === "win32" ? "tar" : "/usr/bin/tar";
 const scratch = await mkdtemp(path.join(os.tmpdir(), "grok-bot-publication-"));
 const archive = path.join(scratch, "repository.tar");
 const exported = path.join(scratch, "exported");

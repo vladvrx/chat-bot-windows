@@ -47,13 +47,11 @@ const env = {
   npm_config_target: electronVersion,
   npm_config_disturl: "https://artifacts.electronjs.org/headers/dist",
 };
-const gyp = process.platform === "win32"
-  ? path.join(repoRoot, "node_modules/.bin/node-gyp.cmd")
-  : path.join(repoRoot, "node_modules/.bin/node-gyp");
+const gyp = path.join(repoRoot, "node_modules", "node-gyp", "bin", "node-gyp.js");
 
 for (const packageName of packages) {
   const packageRoot = path.join(repoRoot, "node_modules", packageName);
-  await run(gyp, ["rebuild", "--directory", packageRoot, "--release", "--nodedir", headersDir, "--jobs", "max"], env);
+  await run(process.execPath, [gyp, "rebuild", "--directory", packageRoot, "--release", "--nodedir", headersDir, "--jobs", "max"], env);
 }
 
 console.log(JSON.stringify({

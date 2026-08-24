@@ -10,7 +10,7 @@ import {
   stagedAppDir
 } from "./config.mjs";
 import { packStagedAppWithIntegrity } from "./asar-integrity.mjs";
-import { resolveRuntimeApp } from "./runtime.mjs";
+import { resolveRuntimeApp, runtimeResourcesPath } from "./runtime.mjs";
 
 export const reconstructedUpdaterGuard = [
   "// Reconstructed-build guard: do not consume official update or telemetry services.",
@@ -136,14 +136,23 @@ export async function buildAsar({
   stageRoot = stagedAppDir,
   archivePath = builtAsar,
   unpackedRoot = builtAsarUnpacked,
+  productName,
 } = {}) {
   const runtimeApp = await resolveRuntimeApp();
-  const resources = path.join(runtimeApp, "Contents", "Resources");
+  const resources = runtimeResourcesPath(runtimeApp);
   const runtimeUnpacked = path.join(resources, "app.asar.unpacked", "dist");
 
   await rm(buildRoot, { recursive: true, force: true });
   await mkdir(buildRoot, { recursive: true });
   await cp(sourceAppDir, stageRoot, { recursive: true, dereference: false, preserveTimestamps: true });
+
+  if (productName != null) {
+    if (typeof productName !== "string" || productName.trim().length === 0) throw new TypeError("A non-empty package product name is required.");
+    const stagedPackagePath = path.join(stageRoot, "package.json");
+    const stagedPackage = JSON.parse(await readFile(stagedPackagePath, "utf8"));
+    stagedPackage.productName = productName.trim();
+    await writeFile(stagedPackagePath, `${JSON.stringify(stagedPackage, null, 2)}\n`);
+  }
 
   if (process.env.GROK_BOT_BUILD_DEV_APP === "1") {
     const stagedPackagePath = path.join(stageRoot, "package.json");

@@ -258,6 +258,7 @@ export async function buildFidelityReconstructedAsar({
   archivePath = fidelityBuiltAsar,
   unpackedRoot = fidelityBuiltAsarUnpacked,
   cleanOutputRoot = fidelityCleanBuildDir,
+  productName,
 } = {}) {
   const fallback = await buildAsar({
     pack: false,
@@ -265,6 +266,7 @@ export async function buildFidelityReconstructedAsar({
     stageRoot,
     archivePath,
     unpackedRoot,
+    productName,
   });
   const base = await buildBaseFidelityDistribution({ outputRoot: cleanOutputRoot });
   const prepared = await prepareProductionActivations(base, hostBindingManifest, electronMainBindingManifest, fidelityRuntimeComposition, { reconstructedPackage: true });

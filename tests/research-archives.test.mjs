@@ -49,8 +49,11 @@ test("bootstrap prefers the hash-pinned local archive before the network", async
   assert.match(attributes, /research-archives\/original\/\*\*\/\*\.dmg filter=lfs diff=lfs merge=lfs -text/);
   assert.match(attributes, /research-archives\/original\/\*\*\/\*\.exe filter=lfs diff=lfs merge=lfs -text/);
   assert.match(config, /export const archivedDmg = path\.join\(repoRoot, "research-archives", "original", "0\.18\.0", "macos-arm64", "Grok_Bot_0\.18\.0\.dmg"\)/);
-  assert.match(bootstrap, /const archivedDigest = await sha256\(archivedDmg\)/);
-  assert.match(bootstrap, /if \(archivedDigest !== dmgSha256\)/);
-  assert.match(bootstrap, /await copyFile\(archivedDmg, cachedDmg\)/);
-  assert.ok(bootstrap.indexOf("await copyFile(archivedDmg, cachedDmg)") < bootstrap.indexOf("await fetch(dmgUrl"));
+  assert.match(config, /export const archivedWindowsInstaller = path\.join\(repoRoot, "research-archives", "original", "0\.18\.0", "windows-x64", "Grok_Bot_0\.18\.0_Setup\.exe"\)/);
+  assert.match(bootstrap, /const archivedDigest = await sha256\(archived\)/);
+  assert.match(bootstrap, /if \(archivedDigest !== expectedSha256\)/);
+  assert.match(bootstrap, /await copyFile\(archived, cached\)/);
+  assert.ok(bootstrap.indexOf("await copyFile(archived, cached)") < bootstrap.indexOf("await fetch(url"));
+  assert.match(bootstrap, /cached: cachedDmg, archived: archivedDmg, expectedSha256: dmgSha256/);
+  assert.match(bootstrap, /cached: cachedWindowsInstaller, archived: archivedWindowsInstaller, expectedSha256: windowsInstallerSha256/);
 });
