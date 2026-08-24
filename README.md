@@ -6,9 +6,8 @@ Unofficial Windows-capable desktop client focused on **ChatGPT / Codex**, built 
 
 > **Important legal notice**  
 > This is an independent research / experimental project. It is **not** affiliated with, endorsed by, or licensed by Anysphere, Cursor, OpenAI, xAI, or any related company.  
-> The reconstructed code is derived from analysis of a proprietary binary. **No upstream source-code license is granted.**  
-> Public redistribution carries copyright, trademark, and terms-of-service risk. Complete an independent legal review before publishing or distributing binaries or source. See [NOTICE.md](NOTICE.md) and [PROVENANCE.md](PROVENANCE.md).
-
+> The reconstructed code is derived from analysis of a proprietary binary. **No upstream source-code license is granted.**
+> 
 ## What this project is
 
 - Readable TypeScript reconstruction of the Electron main process, host, coordinator, protocol, and related runtime pieces of Grok Bot 0.18.0
