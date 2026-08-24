@@ -71,6 +71,11 @@ test("local Codex chat and per-bot model choice are wired through the trusted de
   assert.match(workspace, /editorMode="plain"/);
   assert.match(workspace, /runLocalInferenceText\(/);
   assert.match(workspace, /LocalCodexModelSelector/);
+  assert.match(workspace, /selectOnboardingSuggestions\(\[\], 10\)/);
+  assert.match(workspace, /className="local-codex-suggestion-card"/);
+  assert.match(workspace, /label="Delete bot"/);
+  assert.match(workspace, /label="Clear chat"/);
+  assert.match(workspace, /Duplicate bot/);
   assert.match(workspace, /modelId: activeAgent\.modelId, reasoningEffort: activeAgent\.reasoningEffort/);
   assert.match(preload, /getLocalInferenceModel: \(\) => edge\("getLocalInferenceModel"\)/);
   assert.match(preload, /runLocalInferenceText: \(messages:/);

@@ -7,6 +7,7 @@ import type { ComposerDraft } from "../recovered/features/conversation/workspace
 import { AgentAvatar } from "../recovered/features/conversation/workspace/agent-avatar";
 import { AVATAR_COLORS, AVATAR_SHAPES } from "../recovered/features/agent-info/avatar-editor/model";
 import { OnboardingCharacter } from "../recovered/features/onboarding/signed-in/character";
+import { flattenSuggestionDescription, selectOnboardingSuggestions, suggestionIdentities, type OnboardingSuggestion, type SuggestionIdentity } from "../recovered/features/onboarding/signed-in/suggestions";
 import { OverlayDialog } from "../recovered/ui/overlay-primitives";
 import { SandButton, SandIcon, SandIconButton } from "../recovered/ui/sand-kit-primitives";
 import "../recovered/features/conversation/workspace/view.css";
@@ -30,6 +31,8 @@ const REASONING_EFFORTS: readonly { readonly id: CodexReasoningEffort; readonly 
   { id: "high", label: "High" },
   { id: "xhigh", label: "Extra high" },
 ];
+const LOCAL_BOT_SUGGESTIONS = selectOnboardingSuggestions([], 10);
+const LOCAL_BOT_SUGGESTION_IDENTITIES = suggestionIdentities(LOCAL_BOT_SUGGESTIONS);
 
 function normalizeModelSelection(value: LocalInferenceModelSelection | null | undefined): LocalInferenceModelSelection & { readonly reasoningEffort: CodexReasoningEffort } {
   const modelId = value?.modelId.trim();
@@ -71,6 +74,14 @@ interface LocalCodexStore {
   readonly agents: readonly LocalCodexAgent[];
 }
 
+interface NewBotDraft {
+  readonly name: string;
+  readonly avatarColor: string;
+  readonly avatarShape: string;
+  readonly instructions: string;
+  readonly pickedTemplateId: string | null;
+}
+
 function createId(prefix: string): string {
   const value = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
     ? crypto.randomUUID()
@@ -90,6 +101,29 @@ function createAgent(name = "Codex", model: LocalInferenceModelSelection = FALLB
     messages: [],
     updatedAt: Date.now(),
     isPinned: false
+  };
+}
+
+const EMPTY_LOCAL_AGENT: LocalCodexAgent = {
+  id: "",
+  name: "New Bot",
+  avatarColor: "green",
+  avatarShape: "blob",
+  instructions: "",
+  modelId: FALLBACK_MODEL.modelId,
+  reasoningEffort: FALLBACK_MODEL.reasoningEffort,
+  messages: [],
+  updatedAt: 0,
+  isPinned: false,
+};
+
+function newBotDraft(number: number): NewBotDraft {
+  return {
+    name: number <= 1 ? "Codex" : `Bot ${number}`,
+    avatarColor: "green",
+    avatarShape: "blob",
+    instructions: "",
+    pickedTemplateId: null,
   };
 }
 
@@ -134,7 +168,7 @@ function parseStore(raw: string | null, defaultModel: LocalInferenceModelSelecti
         isPinned: item.isPinned === true
       });
     }
-    if (agents.length === 0) return null;
+    if (agents.length === 0) return { version: 2, activeAgentId: "", agents: [] };
     const activeAgentId = agents.some((agent) => agent.id === parsed.activeAgentId) ? parsed.activeAgentId : agents[0].id;
     return { version: 2, activeAgentId, agents };
   } catch {
@@ -237,7 +271,100 @@ function LocalCodexModelSelector({ disabled, modelId, reasoningEffort, onChange 
   </div>;
 }
 
-function BotCustomizer({ agent, onChange, onClose }: { agent: LocalCodexAgent; onChange(patch: Partial<Pick<LocalCodexAgent, "name" | "avatarColor" | "avatarShape" | "instructions">>): void; onClose(): void }) {
+function NewBotPage({ canCancel, draft, onCancel, onChange, onCreate }: {
+  readonly canCancel: boolean;
+  readonly draft: NewBotDraft;
+  readonly onCancel: () => void;
+  readonly onChange: (draft: NewBotDraft) => void;
+  readonly onCreate: () => void;
+}) {
+  const pickSuggestion = (suggestion: OnboardingSuggestion, identity: SuggestionIdentity) => {
+    onChange({
+      name: suggestion.name,
+      avatarColor: identity.color,
+      avatarShape: identity.shape,
+      instructions: flattenSuggestionDescription(suggestion.description),
+      pickedTemplateId: suggestion.templateId,
+    });
+  };
+
+  return <section className="local-codex-new-bot" aria-labelledby="local-codex-new-bot-title">
+    <header className="local-codex-new-bot__header">
+      <SandIconButton aria-label="Cancel new bot" disabled={!canCancel} icon="arrow-left" label="Back" onClick={onCancel} size="sm" />
+      <h1 id="local-codex-new-bot-title">New Bot</h1>
+    </header>
+    <div className="local-codex-new-bot__body">
+      <section className="local-codex-new-bot__editor" aria-label="Bot details">
+        <div className="local-codex-new-bot__preview">
+          <OnboardingCharacter color={draft.avatarColor} isFollowingPointer shape={draft.avatarShape} sizePx={96} sourceId="local-new-bot" state="happy" />
+          <div>
+            <h2>{draft.name.trim() || "New Bot"}</h2>
+            <p>Give this bot a job, then change how the little guy looks.</p>
+          </div>
+        </div>
+
+        <label className="local-codex-field">
+          <span>Name</span>
+          <input autoFocus maxLength={60} onChange={(event) => onChange({ ...draft, name: event.currentTarget.value, pickedTemplateId: null })} placeholder="New Bot" spellCheck={false} value={draft.name} />
+        </label>
+
+        <label className="local-codex-field">
+          <span>Job</span>
+          <textarea onChange={(event) => onChange({ ...draft, instructions: event.currentTarget.value, pickedTemplateId: null })} placeholder="What should this bot do?" rows={4} value={draft.instructions} />
+        </label>
+
+        <fieldset className="local-codex-choice-group">
+          <legend>Character</legend>
+          <div className="local-codex-shapes">
+            {AVATAR_SHAPES.map((shape) => <button aria-label={`${shape} character shape`} aria-pressed={draft.avatarShape === shape} key={shape} onClick={() => onChange({ ...draft, avatarShape: shape })} title={shape} type="button">
+              <OnboardingCharacter color={draft.avatarColor} paused shape={shape} sizePx={38} sourceId={`new-${shape}`} state="idle" />
+            </button>)}
+          </div>
+        </fieldset>
+
+        <fieldset className="local-codex-choice-group">
+          <legend>Color</legend>
+          <div className="local-codex-colors">
+            {AVATAR_COLORS.map((color) => <button aria-label={`${color.label} character color`} aria-pressed={draft.avatarColor === color.id} key={color.id} onClick={() => onChange({ ...draft, avatarColor: color.id })} title={color.label} type="button">
+              <span style={{ backgroundColor: color.value }} />
+            </button>)}
+          </div>
+        </fieldset>
+
+        <div className="local-codex-new-bot__create">
+          <SandButton disabled={!canCancel} onClick={onCancel} variant="secondary">Cancel</SandButton>
+          <SandButton disabled={draft.name.trim().length === 0} onClick={onCreate} sentiment="accent">Get started</SandButton>
+        </div>
+      </section>
+
+      <section aria-label="Suggestions" className="local-codex-suggestions">
+        <div className="local-codex-suggestions__heading">
+          <div><h2>Suggestions</h2><p>Start with one of the jobs recovered from Grok Bot 0.18.</p></div>
+          <span>{LOCAL_BOT_SUGGESTIONS.length} ideas</span>
+        </div>
+        <div className="local-codex-suggestions__grid">
+          {LOCAL_BOT_SUGGESTIONS.map((suggestion, index) => {
+            const identity = LOCAL_BOT_SUGGESTION_IDENTITIES[index] ?? { color: "orange", shape: "blob" };
+            return <button aria-pressed={draft.pickedTemplateId === suggestion.templateId} className="local-codex-suggestion-card" key={suggestion.templateId} onClick={() => pickSuggestion(suggestion, identity)} style={{ animationDelay: `${index * 45}ms` }} type="button">
+              <OnboardingCharacter color={identity.color} paused shape={identity.shape} sizePx={46} sourceId={`suggestion-${suggestion.templateId}`} state="idle" />
+              <span><strong>{suggestion.name}</strong><small>{flattenSuggestionDescription(suggestion.description)}</small></span>
+              {draft.pickedTemplateId === suggestion.templateId ? <SandIcon name="check" size="sm" /> : null}
+            </button>;
+          })}
+        </div>
+      </section>
+    </div>
+  </section>;
+}
+
+function BotCustomizer({ agent, onChange, onClearChat, onClose, onDelete, onDuplicate }: {
+  readonly agent: LocalCodexAgent;
+  readonly onChange: (patch: Partial<Pick<LocalCodexAgent, "name" | "avatarColor" | "avatarShape" | "instructions">>) => void;
+  readonly onClearChat: () => void;
+  readonly onClose: () => void;
+  readonly onDelete: () => void;
+  readonly onDuplicate: () => void;
+}) {
   return <aside aria-label="Customize bot" className="local-codex-customizer">
     <header className="local-codex-customizer__header">
       <div>
@@ -280,6 +407,13 @@ function BotCustomizer({ agent, onChange, onClose }: { agent: LocalCodexAgent; o
         <textarea onChange={(event) => onChange({ instructions: event.currentTarget.value })} placeholder="How should this bot behave?" rows={6} value={agent.instructions} />
         <small>These instructions are sent privately with each conversation.</small>
       </label>
+
+      <section className="local-codex-bot-actions" aria-label="Bot actions">
+        <span>Bot actions</span>
+        <SandButton leadingIcon="copy" onClick={onDuplicate} variant="secondary">Duplicate bot</SandButton>
+        <SandButton disabled={agent.messages.length === 0} leadingIcon="trash" onClick={onClearChat} variant="secondary">Clear chat</SandButton>
+        <SandButton leadingIcon="trash" onClick={onDelete} sentiment="danger" variant="secondary">Delete bot</SandButton>
+      </section>
     </div>
   </aside>;
 }
@@ -295,6 +429,9 @@ export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
   const [customizerOpen, setCustomizerOpen] = useState(false);
   const [connectionInfoOpen, setConnectionInfoOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<LocalCodexAgent | null>(null);
+  const [clearChatTarget, setClearChatTarget] = useState<LocalCodexAgent | null>(null);
+  const [page, setPage] = useState<"chat" | "new-bot">("chat");
+  const [newAgentDraft, setNewAgentDraft] = useState<NewBotDraft>(() => newBotDraft(2));
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -326,7 +463,7 @@ export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
     return () => window.clearTimeout(timer);
   }, [bridge, loaded, store]);
 
-  const activeAgent = store.agents.find((agent) => agent.id === store.activeAgentId) ?? store.agents[0];
+  const activeAgent = store.agents.find((agent) => agent.id === store.activeAgentId) ?? store.agents[0] ?? EMPTY_LOCAL_AGENT;
   const activeRunning = runningAgentIds.has(activeAgent.id);
   const draft = drafts[activeAgent.id] ?? EMPTY_DRAFT;
   const sidebarAgents = useMemo(() => store.agents.map((agent) => projectSidebarAgent(agent, runningAgentIds.has(agent.id))), [runningAgentIds, store.agents]);
@@ -346,10 +483,25 @@ export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
   };
 
   const createNewAgent = () => {
-    const number = store.agents.length + 1;
-    const agent = createAgent(number === 1 ? "Codex" : `Bot ${number}`, machineDefaultModel);
+    setNewAgentDraft(newBotDraft(store.agents.length + 1));
+    setPage("new-bot");
+    setCustomizerOpen(false);
+    setConnectionInfoOpen(false);
+    setNotice(null);
+  };
+
+  const createAgentFromDraft = () => {
+    const name = newAgentDraft.name.trim();
+    if (name.length === 0) return;
+    const agent: LocalCodexAgent = {
+      ...createAgent(name, machineDefaultModel),
+      avatarColor: newAgentDraft.avatarColor,
+      avatarShape: newAgentDraft.avatarShape,
+      instructions: newAgentDraft.instructions.trim(),
+    };
     setStore((current) => ({ ...current, activeAgentId: agent.id, agents: [agent, ...current.agents] }));
-    setCustomizerOpen(true);
+    setPage("chat");
+    setCustomizerOpen(false);
     setConnectionInfoOpen(false);
     setNotice(null);
   };
@@ -366,23 +518,37 @@ export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
       updatedAt: Date.now()
     };
     setStore((current) => ({ ...current, activeAgentId: duplicate.id, agents: [duplicate, ...current.agents] }));
+    setPage("chat");
     setCustomizerOpen(true);
   };
 
+  const clearAgentChat = (agentId: string) => {
+    updateAgent(agentId, { messages: [] });
+    setDrafts((current) => ({ ...current, [agentId]: EMPTY_DRAFT }));
+    setClearChatTarget(null);
+    setCustomizerOpen(false);
+  };
+
   const deleteAgent = (agentId: string) => {
+    const deletingLastAgent = store.agents.length === 1 && store.agents[0]?.id === agentId;
     setStore((current) => {
       const remaining = current.agents.filter((agent) => agent.id !== agentId);
       if (remaining.length > 0) return { ...current, activeAgentId: current.activeAgentId === agentId ? remaining[0].id : current.activeAgentId, agents: remaining };
-      const replacement = createAgent("Codex", machineDefaultModel);
-      return { version: 2, activeAgentId: replacement.id, agents: [replacement] };
+      return { version: 2, activeAgentId: "", agents: [] };
     });
     setDeleteTarget(null);
     setCustomizerOpen(false);
+    if (deletingLastAgent) {
+      setNewAgentDraft(newBotDraft(1));
+      setPage("new-bot");
+    } else {
+      setPage("chat");
+    }
   };
 
   const send = async () => {
     const content = draft.prompt.trim();
-    if (content.length === 0 || activeRunning) return;
+    if (activeAgent.id.length === 0 || content.length === 0 || activeRunning) return;
     const agentId = activeAgent.id;
     const userMessage: LocalCodexMessage = { id: createId("message"), role: "user", content, timestampMs: Date.now() };
     const requestMessages = [...activeAgent.messages, userMessage];
@@ -414,6 +580,7 @@ export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
 
   const selectAgent = (agentId: string) => {
     setStore((current) => ({ ...current, activeAgentId: agentId }));
+    setPage("chat");
     setCustomizerOpen(false);
     setConnectionInfoOpen(false);
     setNotice(null);
@@ -445,7 +612,7 @@ export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
         </div>
       </div>
 
-      <section className="local-codex-conversation">
+      {page === "new-bot" ? <NewBotPage canCancel={store.agents.length > 0} draft={newAgentDraft} onCancel={() => setPage("chat")} onChange={setNewAgentDraft} onCreate={createAgentFromDraft} /> : <section className="local-codex-conversation">
         <main className="sand-chat-stage">
           <ConversationAgentHeader
             agent={{
@@ -466,7 +633,10 @@ export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
             isInfoOpen={connectionInfoOpen}
             onToggleInfo={() => setConnectionInfoOpen((open) => !open)}
             onToggleSettings={() => setCustomizerOpen((open) => !open)}
-            trailing={<SandButton leadingIcon="edit" onClick={() => setCustomizerOpen((open) => !open)} size="sm" variant="secondary">Customize</SandButton>}
+            trailing={<div className="local-codex-header-actions">
+              <SandIconButton aria-label={`Delete ${activeAgent.name}`} icon="trash" label="Delete" onClick={() => setDeleteTarget(activeAgent)} sentiment="danger" size="sm" />
+              <SandButton leadingIcon="edit" onClick={() => setCustomizerOpen((open) => !open)} size="sm" variant="secondary">Customize</SandButton>
+            </div>}
           />
           {activeAgent.messages.length === 0 ? <div className="local-codex-empty">
             <OnboardingCharacter color={activeAgent.avatarColor} isFollowingPointer shape={activeAgent.avatarShape} sizePx={132} sourceId={`${activeAgent.id}-empty`} state="idle" />
@@ -498,10 +668,17 @@ export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
             transcribeAudio={(audio, mimeType, language) => bridge.transcribeAudio(audio, mimeType, language)}
           />
         </div>
-      </section>
+      </section>}
     </div>
 
-    {customizerOpen ? <BotCustomizer agent={activeAgent} onChange={(patch) => updateAgent(activeAgent.id, patch)} onClose={() => setCustomizerOpen(false)} /> : null}
+    {customizerOpen ? <BotCustomizer
+      agent={activeAgent}
+      onChange={(patch) => updateAgent(activeAgent.id, patch)}
+      onClearChat={() => setClearChatTarget(activeAgent)}
+      onClose={() => setCustomizerOpen(false)}
+      onDelete={() => setDeleteTarget(activeAgent)}
+      onDuplicate={() => duplicateAgent(activeAgent.id)}
+    /> : null}
     {connectionInfoOpen ? <div className="local-codex-connection-card" role="status">
       <AgentAvatar agentId={activeAgent.id} color={activeAgent.avatarColor} isStatic={!activeRunning} shape={activeAgent.avatarShape} size="lg" state={activeRunning ? "working" : "idle"} />
       <div><strong>Codex is connected</strong><span>This app uses the ChatGPT login already stored by Codex.</span></div>
@@ -513,6 +690,13 @@ export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
         <h2>Delete {deleteTarget?.name}?</h2>
         <p>This removes the bot and its local chat history.</p>
         <div><SandButton onClick={() => setDeleteTarget(null)} variant="secondary">Cancel</SandButton><SandButton onClick={() => deleteTarget == null ? undefined : deleteAgent(deleteTarget.id)} sentiment="danger">Delete</SandButton></div>
+      </div>
+    </OverlayDialog>
+    <OverlayDialog label="Clear chat" onClose={() => setClearChatTarget(null)} open={clearChatTarget != null} role="alertdialog">
+      <div className="local-codex-delete-dialog">
+        <h2>Clear {clearChatTarget?.name}'s chat?</h2>
+        <p>This removes every message but keeps the bot and its settings.</p>
+        <div><SandButton onClick={() => setClearChatTarget(null)} variant="secondary">Cancel</SandButton><SandButton onClick={() => clearChatTarget == null ? undefined : clearAgentChat(clearChatTarget.id)} sentiment="danger">Clear chat</SandButton></div>
       </div>
     </OverlayDialog>
   </div>;
