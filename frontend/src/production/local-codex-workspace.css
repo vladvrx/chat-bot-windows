@@ -61,6 +61,11 @@
 .local-codex-conversation .sand-chat-stage { position: relative; }
 
 .local-codex-header-actions { display: flex; align-items: center; gap: 6px; }
+.local-codex-conversation .sand-chat-header__controls button,
+.local-codex-conversation .sand-chat-header__controls .ui-icon {
+  color: #fff !important;
+}
+.local-codex-conversation .sand-chat-header__controls button:disabled { opacity: 1; }
 .local-codex-header-actions .sand-kit-button,
 .local-codex-new-bot__create .sand-kit-button,
 .local-codex-bot-actions .sand-kit-button { color: var(--cursor-text-primary); background: var(--sand-fill-secondary); }
@@ -162,6 +167,17 @@
 .local-codex-shell .sand-prompt-shell { min-height: 100px; padding: 10px; border-radius: 20px; }
 .local-codex-shell .sand-prompt-field { min-height: 49px; padding: 5px 6px 0; }
 .local-codex-shell .sand-prompt-actions-row { min-height: 30px; }
+.local-codex-shell .sand-prompt-actions-leading .sand-prompt-attach {
+  margin-left: 4px;
+  color: #fff !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+.local-codex-shell .sand-prompt-actions-leading .sand-prompt-attach:hover:not(:disabled),
+.local-codex-shell .sand-prompt-actions-leading .sand-prompt-attach:focus-visible:not(:disabled) { background: transparent !important; }
+.local-codex-shell .sand-prompt-actions-leading .sand-prompt-attach .ui-icon,
+.local-codex-shell .sand-prompt-actions-trailing .sand-prompt-mic,
+.local-codex-shell .sand-prompt-actions-trailing .sand-prompt-mic .ui-icon { color: #fff !important; }
 
 .local-codex-trust-button {
   display: grid;

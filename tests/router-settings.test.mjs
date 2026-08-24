@@ -52,9 +52,10 @@ test("Router settings read and update the trusted backend provider", async () =>
 });
 
 test("local Codex chat and per-bot model choice are wired through the trusted desktop RPC", async () => {
-  const [renderer, workspace, preload, edge, rpc, provider] = await Promise.all([
+  const [renderer, workspace, workspaceCss, preload, edge, rpc, provider] = await Promise.all([
     readFile(path.join(repoRoot, "frontend/src/production/ProductionRenderer.tsx"), "utf8"),
     readFile(path.join(repoRoot, "frontend/src/production/LocalCodexWorkspace.tsx"), "utf8"),
+    readFile(path.join(repoRoot, "frontend/src/production/local-codex-workspace.css"), "utf8"),
     readFile(path.join(repoRoot, "source/electron-preload/preload.ts"), "utf8"),
     readFile(path.join(repoRoot, "source/electron-main/main-edge.ts"), "utf8"),
     readFile(path.join(repoRoot, "source/shared/rpc/main.ts"), "utf8"),
@@ -80,6 +81,9 @@ test("local Codex chat and per-bot model choice are wired through the trusted de
   assert.match(workspace, /Included usage only/);
   assert.match(workspace, /isIncludedUsageExhausted/);
   assert.match(workspace, /Paid credits are separate/);
+  assert.match(workspaceCss, /\.sand-prompt-attach[\s\S]*?margin-left: 4px;[\s\S]*?background: transparent !important;/);
+  assert.match(workspaceCss, /\.sand-prompt-mic[\s\S]*?color: #fff !important;/);
+  assert.match(workspaceCss, /\.sand-chat-header__controls[\s\S]*?color: #fff !important;/);
   assert.match(preload, /getLocalInferenceModel: \(\) => edge\("getLocalInferenceModel"\)/);
   assert.match(preload, /runLocalInferenceText: \(messages:/);
   assert.match(preload, /\{ messages, model \}/);
