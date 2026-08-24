@@ -220,7 +220,9 @@ import { createElectronProductionAvatarImagesBinding } from "./source/electron-m
 import { createElectronProductionImageContextMenuBinding } from "./source/electron-main/adapters/avatar-images.ts";
 import { createElectronProductionCursorAccountBinding } from "./source/electron-main/adapters/account-edge.ts";
 import { composeElectronProductionCoordinatorBindings, createElectronProductionServiceFactories } from "./source/electron-main/production-adapters.ts";
+import { installWindowsProcessPipeGuards } from "./source/electron-main/windows-process-pipe-guard.ts";
 
+installWindowsProcessPipeGuards();
 const coordinatorBindings = composeElectronProductionCoordinatorBindings(
   ${expression(bindings, "adapters.coordinator")},
   ${expression(bindings, "adapters.ipc")},

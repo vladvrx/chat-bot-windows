@@ -5,6 +5,7 @@ import test from "node:test";
 
 import { runtimePlatform, runtimeResourcesPath } from "../scripts/lib/runtime.mjs";
 import { inspectPeCertificate, stripPeCertificate } from "../scripts/lib/windows-pe.mjs";
+import { installWindowsProcessPipeGuards } from "../source/electron-main/windows-process-pipe-guard.ts";
 
 const repositoryRoot = path.resolve(import.meta.dirname, "..");
 
@@ -51,4 +52,18 @@ test("Windows packaging uses the pinned runtime and a separate executable identi
   assert.match(packager, /await rcedit\(outputWindowsExecutable/);
   assert.match(verifier, /Reconstructed Windows executable still carries an Authenticode certificate payload/);
   assert.equal(JSON.parse(packageJson).scripts["package:windows"], "npm run check && node scripts/package-windows.mjs");
+});
+
+test("Windows GUI launches ignore only broken console pipes", () => {
+  const listeners = [];
+  const stream = { on(event, listener) { assert.equal(event, "error"); listeners.push(listener); } };
+  installWindowsProcessPipeGuards("win32", [stream]);
+  assert.equal(listeners.length, 1);
+  assert.doesNotThrow(() => listeners[0](Object.assign(new Error("broken pipe"), { code: "EPIPE" })));
+  assert.throws(() => listeners[0](Object.assign(new Error("disk failure"), { code: "EIO" })), /disk failure/);
+});
+
+test("Windows startup does not require macOS application-folder APIs", async () => {
+  const provider = await readFile(path.join(repositoryRoot, "source/electron-main/production-binding-providers.ts"), "utf8");
+  assert.match(provider, /if \(platform === "darwin"\) \{\s*requireFunction\(ports\?\.app\?\.isInApplicationsFolder/);
 });
