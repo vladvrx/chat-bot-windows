@@ -128,8 +128,6 @@ export function createMainEdgeHandlers(deps: MainEdgeDeps): HandlerMap {
     setInferenceRouter: async (raw) => { const provider = req(raw).provider; invariant(isSandInferenceProvider(provider), "Unknown inference provider."); invoke(deps.settingsStore, "setInferenceProvider", provider); const settings = await deps.syncHostSettingsToBox({ inferenceProvider: provider }).catch(() => null); return { provider, usage: settings?.inferenceRouterUsage ?? invoke(deps.settingsStore, "getInferenceRouterUsage") ?? null, local: getLocalInferenceCliStatus() }; },
     getLocalInferenceModel: () => getConfiguredCodexModelSelection(),
     runLocalInferenceText: async (raw) => {
-      const provider = invoke(deps.settingsStore, "getInferenceProvider");
-      invariant(provider === "codex" || provider === "claude-code" || provider === "openrouter", "Select a local inference provider first.");
       const source = req(raw).messages;
       invariant(Array.isArray(source) && source.length > 0 && source.length <= 50, "A local inference turn needs 1 to 50 messages.");
       const messages = source.map((value) => {
@@ -137,8 +135,10 @@ export function createMainEdgeHandlers(deps: MainEdgeDeps): HandlerMap {
         invariant((message.role === "user" || message.role === "assistant") && typeof message.content === "string" && message.content.length > 0 && message.content.length <= 100_000, "Local inference messages need a supported role and bounded text.");
         return { role: message.role, content: message.content };
       });
-      const codexModel = provider === "codex" ? parseCodexModelSelection(req(raw).model) : undefined;
-      return { text: await runRoutedProviderText(provider, messages, codexModel == null ? undefined : { codexModel }) };
+      // Grok Bot's local workspace is deliberately plan-only. It must never
+      // inherit the global router and silently fall through to a metered API.
+      const codexModel = parseCodexModelSelection(req(raw).model);
+      return { text: await runRoutedProviderText("codex", messages, codexModel == null ? undefined : { codexModel }) };
     },
     getBoxRuntime: async () => { const mode = invoke(deps.settingsStore, "getBoxRuntime"); invariant(isSandBoxRuntime(mode), "Unknown box runtime."); return { mode, status: await getLocalDockerStatus(String(Reflect.get(deps.settingsStore, "settingsPath"))) }; },
     setBoxRuntime: async (raw) => { const mode = req(raw).mode; invariant(isSandBoxRuntime(mode), "Unknown box runtime."); const settingsPath = String(Reflect.get(deps.settingsStore, "settingsPath")); invoke(deps.settingsStore, "setBoxRuntime", mode); try { if (mode === "local-docker") await startLocalDockerBox(settingsPath); else await stopLocalDockerBox(); } catch (error) { invoke(deps.settingsStore, "setBoxRuntime", mode === "local-docker" ? "remote" : "local-docker"); throw error; } invoke(deps.boxRecovery, "restartCoordinator"); return { mode, status: await getLocalDockerStatus(settingsPath) }; },

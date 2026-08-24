@@ -113,6 +113,15 @@ Windows build opens the reconstructed Grok Bot shell with Codex behind it. The
 standalone workspace uses the recovered sidebar, chat header, transcript,
 composer, and animated character renderer.
 
+The standalone workspace is pinned to ChatGPT Codex and never inherits the
+global Router provider. It therefore cannot silently switch bot messages to
+OpenRouter, Claude, or another metered API. If Codex reports an exhausted or
+rate-limited allowance, the turn stops and a separate paid-credits explanation
+appears. Paid providers remain disabled. OpenAI does not currently document a
+client-side request flag that guarantees purchased Codex credits will not be
+used by the ChatGPT backend, so this project does not claim to enforce that
+server-side billing policy.
+
 Use **New** to create local bots. Each bot has its own persisted chat history,
 name, original Grok Bot shape, color, and custom instructions. Open
 **Customize** to change the character. Bots can also be renamed, duplicated,

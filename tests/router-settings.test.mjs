@@ -77,11 +77,16 @@ test("local Codex chat and per-bot model choice are wired through the trusted de
   assert.match(workspace, /label="Clear chat"/);
   assert.match(workspace, /Duplicate bot/);
   assert.match(workspace, /modelId: activeAgent\.modelId, reasoningEffort: activeAgent\.reasoningEffort/);
+  assert.match(workspace, /Included usage only/);
+  assert.match(workspace, /isIncludedUsageExhausted/);
+  assert.match(workspace, /Paid credits are separate/);
   assert.match(preload, /getLocalInferenceModel: \(\) => edge\("getLocalInferenceModel"\)/);
   assert.match(preload, /runLocalInferenceText: \(messages:/);
   assert.match(preload, /\{ messages, model \}/);
   assert.match(edge, /getLocalInferenceModel: \(\) => getConfiguredCodexModelSelection\(\)/);
   assert.match(edge, /runLocalInferenceText: async \(raw\)/);
+  assert.match(edge, /runRoutedProviderText\("codex", messages/);
+  assert.doesNotMatch(edge.match(/runLocalInferenceText: async \(raw\) => \{[\s\S]*?\n    \},/)?.[0] ?? "", /getInferenceProvider/);
   assert.match(edge, /\{ codexModel \}/);
   assert.match(rpc, /getLocalInferenceModel: \{ args: "none" \}/);
   assert.match(rpc, /runLocalInferenceText: \{ args: "object" \}/);

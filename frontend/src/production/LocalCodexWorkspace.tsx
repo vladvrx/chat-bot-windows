@@ -48,6 +48,11 @@ function modelLabel(modelId: string): string {
   return modelId.replace(/^gpt-/i, "").replace(/(^|[-_])([a-z])/g, (_match, separator: string, letter: string) => `${separator === "-" || separator === "_" ? " " : separator}${letter.toUpperCase()}`);
 }
 
+function isIncludedUsageExhausted(reason: unknown): boolean {
+  const message = reason instanceof Error ? reason.message : String(reason);
+  return /(?:\b429\b|usage[_ -]?limit|rate[_ -]?limit|resource[_ -]?exhausted|insufficient[_ -]?quota|quota[_ -]?exceeded|out of (?:codex )?usage)/i.test(message);
+}
+
 interface LocalCodexMessage {
   readonly id: string;
   readonly role: "user" | "assistant";
@@ -428,6 +433,8 @@ export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [customizerOpen, setCustomizerOpen] = useState(false);
   const [connectionInfoOpen, setConnectionInfoOpen] = useState(false);
+  const [includedUsageExhausted, setIncludedUsageExhausted] = useState(false);
+  const [paidCreditsOpen, setPaidCreditsOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<LocalCodexAgent | null>(null);
   const [clearChatTarget, setClearChatTarget] = useState<LocalCodexAgent | null>(null);
   const [page, setPage] = useState<"chat" | "new-bot">("chat");
@@ -568,7 +575,12 @@ export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
         agents: current.agents.map((agent) => agent.id === agentId ? { ...agent, messages: [...agent.messages, assistantMessage], updatedAt: Date.now() } : agent)
       }));
     } catch (reason) {
-      setNotice(reason instanceof Error ? reason.message : String(reason));
+      if (isIncludedUsageExhausted(reason)) {
+        setIncludedUsageExhausted(true);
+        setNotice("Included Codex usage is unavailable. Grok Bot stopped and did not switch to a paid API provider.");
+      } else {
+        setNotice(reason instanceof Error ? reason.message : String(reason));
+      }
     } finally {
       setRunningAgentIds((current) => {
         const next = new Set(current);
@@ -607,7 +619,7 @@ export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
         <div className="local-codex-sidebar-footer">
           <button className="local-codex-account" onClick={() => setConnectionInfoOpen((open) => !open)} type="button">
             <span><SandIcon name="check" size="sm" /></span>
-            <span><strong>Codex</strong><small>ChatGPT connected</small></span>
+            <span><strong>Codex</strong><small>Included usage only</small></span>
           </button>
         </div>
       </div>
@@ -651,7 +663,7 @@ export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
             disabled={activeRunning}
             draft={draft}
             editorMode="plain"
-            leadingAccessory={<button aria-label="ChatGPT connection details" className="local-codex-trust-button" onClick={() => setConnectionInfoOpen((open) => !open)} title="ChatGPT connected" type="button"><SandIcon name="shield-check" size="sm" /></button>}
+            leadingAccessory={<button aria-label="ChatGPT connection details" className="local-codex-trust-button" onClick={() => setConnectionInfoOpen((open) => !open)} title="Included Codex usage only" type="button"><SandIcon name="shield-check" size="sm" /></button>}
             centerControl={<LocalCodexModelSelector
               disabled={activeRunning}
               modelId={activeAgent.modelId}
@@ -681,9 +693,24 @@ export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
     /> : null}
     {connectionInfoOpen ? <div className="local-codex-connection-card" role="status">
       <AgentAvatar agentId={activeAgent.id} color={activeAgent.avatarColor} isStatic={!activeRunning} shape={activeAgent.avatarShape} size="lg" state={activeRunning ? "working" : "idle"} />
-      <div><strong>Codex is connected</strong><span>This app uses the ChatGPT login already stored by Codex.</span></div>
+      <div><strong>Included Codex usage only</strong><span>This route is pinned to the ChatGPT login stored by Codex. Metered API providers are off.</span></div>
       <SandIconButton aria-label="Close connection details" icon="close" label="Close" onClick={() => setConnectionInfoOpen(false)} size="sm" />
     </div> : null}
+
+    <OverlayDialog label="Included Codex usage unavailable" onClose={() => setIncludedUsageExhausted(false)} open={includedUsageExhausted} role="alertdialog">
+      <div className="local-codex-delete-dialog">
+        <h2>Included Codex usage is unavailable</h2>
+        <p>Grok Bot stopped. It will not switch to OpenRouter, Claude, or another metered API provider.</p>
+        <div><SandButton onClick={() => setIncludedUsageExhausted(false)} variant="secondary">Close</SandButton><SandButton onClick={() => { setIncludedUsageExhausted(false); setPaidCreditsOpen(true); }}>Paid credits...</SandButton></div>
+      </div>
+    </OverlayDialog>
+    <OverlayDialog label="Paid credits" onClose={() => setPaidCreditsOpen(false)} open={paidCreditsOpen} role="dialog">
+      <div className="local-codex-delete-dialog">
+        <h2>Paid credits are separate</h2>
+        <p>They are not enabled in Grok Bot. OpenAI does not document a client-side control that guarantees purchased Codex credits stay unused, so this app will not silently opt you in.</p>
+        <div><SandButton onClick={() => setPaidCreditsOpen(false)}>Got it</SandButton></div>
+      </div>
+    </OverlayDialog>
 
     <OverlayDialog label="Delete bot" onClose={() => setDeleteTarget(null)} open={deleteTarget != null} role="alertdialog">
       <div className="local-codex-delete-dialog">
