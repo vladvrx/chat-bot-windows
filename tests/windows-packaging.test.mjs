@@ -71,6 +71,13 @@ test("Windows startup does not require macOS application-folder APIs", async () 
   assert.match(provider, /if \(platform === "darwin"\) \{\s*requireFunction\(ports\?\.app\?\.isInApplicationsFolder/);
 });
 
+test("Windows keeps stable software rendering unless hardware acceleration is explicitly requested", async () => {
+  const main = await readFile(path.join(repositoryRoot, "source/electron-main/main.ts"), "utf8");
+  assert.match(main, /const useSoftwareRendering = env\.SAND_ENABLE_HARDWARE_ACCELERATION !== "1"/);
+  assert.match(main, /if \(useSoftwareRendering\) deps\.app\.disableHardwareAcceleration\(\)/);
+  assert.match(main, /if \(useSoftwareRendering\) deps\.app\.commandLine\.appendSwitch\("disable-gpu"\)/);
+});
+
 test("Windows Codex login accepts ACL-protected files without POSIX mode bits", async () => {
   const [providerSession, localRouter] = await Promise.all([
     readFile(path.join(repositoryRoot, "source/host/extensions/inference/provider-session.ts"), "utf8"),

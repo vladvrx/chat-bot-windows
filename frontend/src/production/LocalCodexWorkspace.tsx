@@ -3,13 +3,14 @@ import type { CodexReasoningEffort, DesktopBridge, LocalInferenceModelSelection 
 import { ConversationComposer } from "../recovered/features/conversation/workspace/composer";
 import { ConversationAgentHeader } from "../recovered/features/conversation/workspace/chat-header";
 import { ConversationSidebar, type SidebarAgent } from "../recovered/features/conversation/workspace/sidebar";
-import { ConversationTranscript } from "../recovered/features/conversation/workspace/transcript";
-import type { ComposerDraft, TranscriptMessage } from "../recovered/features/conversation/workspace/model";
+import type { ComposerDraft } from "../recovered/features/conversation/workspace/model";
 import { AgentAvatar } from "../recovered/features/conversation/workspace/agent-avatar";
 import { AVATAR_COLORS, AVATAR_SHAPES } from "../recovered/features/agent-info/avatar-editor/model";
 import { OnboardingCharacter } from "../recovered/features/onboarding/signed-in/character";
 import { OverlayDialog } from "../recovered/ui/overlay-primitives";
 import { SandButton, SandIcon, SandIconButton } from "../recovered/ui/sand-kit-primitives";
+import "../recovered/features/conversation/workspace/view.css";
+import "./production.css";
 import "./local-codex-workspace.css";
 
 const STORE_KEY = "sand.local-codex.workspace.v2";
@@ -141,18 +142,6 @@ function parseStore(raw: string | null, defaultModel: LocalInferenceModelSelecti
   }
 }
 
-function projectTranscript(agent: LocalCodexAgent): TranscriptMessage[] {
-  return agent.messages.map((message) => ({
-    kind: "message",
-    id: message.id,
-    role: message.role,
-    author: message.role === "user" ? "You" : agent.name,
-    text: message.content,
-    timestampMs: message.timestampMs,
-    delivery: "sent"
-  }));
-}
-
 function projectSidebarAgent(agent: LocalCodexAgent, running: boolean): SidebarAgent {
   const last = agent.messages.at(-1);
   return {
@@ -163,6 +152,7 @@ function projectSidebarAgent(agent: LocalCodexAgent, running: boolean): SidebarA
     isRunning: running,
     avatarColor: agent.avatarColor,
     avatarShape: agent.avatarShape,
+    avatarStatic: !running,
     lastMessage: running ? "Working" : last?.content ?? "Start a conversation",
     lastMessageId: last?.id ?? null,
     lastMessagePreview: last?.content ?? null
@@ -176,6 +166,22 @@ function instructionPrefix(agent: LocalCodexAgent) {
     role: "user" as const,
     content: `You are ${agent.name}. Follow these custom instructions for this conversation:\n${instructions}`
   }];
+}
+
+function LocalCodexTranscript({ agent, running }: { readonly agent: LocalCodexAgent; readonly running: boolean }) {
+  return <div aria-live="polite" aria-relevant="additions" className="local-codex-transcript" role="log">
+    {agent.messages.map((message) => <article className={`local-codex-message local-codex-message--${message.role}`} key={message.id}>
+      {message.role === "assistant" ? <AgentAvatar agentId={agent.id} color={agent.avatarColor} isStatic shape={agent.avatarShape} size="sm" state="idle" /> : null}
+      <div className="local-codex-message__content">
+        <div className="local-codex-message__bubble">{message.content}</div>
+        <button aria-label="Copy message" className="local-codex-message__copy" onClick={() => void navigator.clipboard.writeText(message.content)} title={new Date(message.timestampMs).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} type="button"><SandIcon name="copy" size="xs" /></button>
+      </div>
+    </article>)}
+    {running ? <article aria-label={`${agent.name} is thinking`} className="local-codex-message local-codex-message--assistant">
+      <AgentAvatar agentId={agent.id} color={agent.avatarColor} shape={agent.avatarShape} size="sm" state="working" />
+      <div className="local-codex-thinking" role="status"><span /><span /><span /></div>
+    </article> : null}
+  </div>;
 }
 
 function LocalCodexModelSelector({ disabled, modelId, reasoningEffort, onChange }: {
@@ -323,15 +329,14 @@ export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
   const activeAgent = store.agents.find((agent) => agent.id === store.activeAgentId) ?? store.agents[0];
   const activeRunning = runningAgentIds.has(activeAgent.id);
   const draft = drafts[activeAgent.id] ?? EMPTY_DRAFT;
-  const transcript = useMemo(() => projectTranscript(activeAgent), [activeAgent]);
   const sidebarAgents = useMemo(() => store.agents.map((agent) => projectSidebarAgent(agent, runningAgentIds.has(agent.id))), [runningAgentIds, store.agents]);
   const pinnedAgentIds = useMemo(() => store.agents.filter((agent) => agent.isPinned).map((agent) => agent.id), [store.agents]);
 
   useEffect(() => {
-    const transcriptElement = rootRef.current?.querySelector<HTMLElement>(".sand-virtual-transcript");
+    const transcriptElement = rootRef.current?.querySelector<HTMLElement>(".local-codex-transcript");
     if (transcriptElement == null) return;
     transcriptElement.scrollTop = transcriptElement.scrollHeight;
-  }, [activeAgent.id, activeRunning, transcript.length]);
+  }, [activeAgent.id, activeAgent.messages.length, activeRunning]);
 
   const updateAgent = (agentId: string, patch: Partial<LocalCodexAgent>) => {
     setStore((current) => ({
@@ -453,6 +458,7 @@ export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
               avatarDataUrl: null,
               avatarShape: activeAgent.avatarShape,
               avatarColor: activeAgent.avatarColor,
+              avatarStatic: !activeRunning,
               isSharedRoom: false,
               memberIds: []
             }}
@@ -462,22 +468,19 @@ export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
             onToggleSettings={() => setCustomizerOpen((open) => !open)}
             trailing={<SandButton leadingIcon="edit" onClick={() => setCustomizerOpen((open) => !open)} size="sm" variant="secondary">Customize</SandButton>}
           />
-          {transcript.length === 0 ? <div className="local-codex-empty">
+          {activeAgent.messages.length === 0 ? <div className="local-codex-empty">
             <OnboardingCharacter color={activeAgent.avatarColor} isFollowingPointer shape={activeAgent.avatarShape} sizePx={132} sourceId={`${activeAgent.id}-empty`} state="idle" />
             <h1>{activeAgent.name}</h1>
             <p>What should we work on?</p>
             <SandButton onClick={() => setCustomizerOpen(true)} size="sm" variant="secondary">Customize this bot</SandButton>
-          </div> : <ConversationTranscript
-            entries={transcript}
-            isAgentRunning={activeRunning}
-            onCopyMessage={(entry) => navigator.clipboard.writeText(entry.text)}
-          />}
+          </div> : <LocalCodexTranscript agent={activeAgent} running={activeRunning} />}
         </main>
         <div className="sand-chat-input-dock">
           <ConversationComposer
             acceptedSendGeneration={acceptedSendGeneration}
             disabled={activeRunning}
             draft={draft}
+            editorMode="plain"
             leadingAccessory={<button aria-label="ChatGPT connection details" className="local-codex-trust-button" onClick={() => setConnectionInfoOpen((open) => !open)} title="ChatGPT connected" type="button"><SandIcon name="shield-check" size="sm" /></button>}
             centerControl={<LocalCodexModelSelector
               disabled={activeRunning}
@@ -500,7 +503,7 @@ export function LocalCodexWorkspace({ bridge }: { bridge: DesktopBridge }) {
 
     {customizerOpen ? <BotCustomizer agent={activeAgent} onChange={(patch) => updateAgent(activeAgent.id, patch)} onClose={() => setCustomizerOpen(false)} /> : null}
     {connectionInfoOpen ? <div className="local-codex-connection-card" role="status">
-      <AgentAvatar agentId={activeAgent.id} color={activeAgent.avatarColor} shape={activeAgent.avatarShape} size="lg" state={activeRunning ? "working" : "idle"} />
+      <AgentAvatar agentId={activeAgent.id} color={activeAgent.avatarColor} isStatic={!activeRunning} shape={activeAgent.avatarShape} size="lg" state={activeRunning ? "working" : "idle"} />
       <div><strong>Codex is connected</strong><span>This app uses the ChatGPT login already stored by Codex.</span></div>
       <SandIconButton aria-label="Close connection details" icon="close" label="Close" onClick={() => setConnectionInfoOpen(false)} size="sm" />
     </div> : null}

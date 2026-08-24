@@ -125,6 +125,12 @@ sent with that bot's real Codex request. The current choices are 5.6 Sol,
 Availability depends on the models enabled for the signed-in ChatGPT/Codex
 account.
 
+The Windows local workspace loads separately from the full cloud interface. It
+uses a native text composer and a compact transcript, leaves the rich editor
+and cloud workspace unloaded, and pauses small character animations while they
+are idle. This keeps typing and sending responsive without removing character
+customization.
+
 The original Grok Bot remote computer, cloud roster, plugins, and computer-use
 tools still require the upstream Cursor/Grok Bot service and are not available
 in standalone mode. The computer button only reports the local Codex connection

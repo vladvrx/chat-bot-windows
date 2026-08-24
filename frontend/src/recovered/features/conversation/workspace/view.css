@@ -313,6 +313,7 @@
 .sand-chat-drop-overlay__badge { padding: 8px 12px; color: var(--sand-text-on-color); background: var(--sand-fill-primary); border-radius: 999px; font-size: 11px; font-weight: 600; }
 .sand-prompt-attachment-notice { margin: 2px 6px 8px; color: var(--cursor-text-tertiary); font-size: 10px; }
 .sand-prompt-field { display: block; box-sizing: border-box; width: 100%; min-height: 48px; resize: none; color: var(--cursor-text-primary); background: transparent; border: 0; outline: none; line-height: 1.4; }
+.sand-prompt-field--plain { overflow: auto; font: inherit; }
 .sand-prompt-field::placeholder { color: var(--cursor-input-placeholder-foreground); }
 .sand-prompt-attachments { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 7px; }
 .sand-prompt-attachment { display: flex; align-items: center; gap: 8px; max-width: 210px; padding: 6px 7px 6px 9px; background: var(--cursor-bg-tertiary); border: 1px solid var(--cursor-stroke-secondary); border-radius: 8px; }

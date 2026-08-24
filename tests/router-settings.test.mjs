@@ -60,9 +60,15 @@ test("local Codex chat and per-bot model choice are wired through the trusted de
     readFile(path.join(repoRoot, "source/shared/rpc/main.ts"), "utf8"),
     readFile(path.join(repoRoot, "source/host/extensions/inference/provider-session.ts"), "utf8"),
   ]);
-  assert.match(renderer, /<LocalCodexWorkspace bridge=\{bridge\}/);
+  assert.match(renderer, /lazy\(async \(\) =>/);
+  assert.match(renderer, /import\("\.\/FullProductionRenderer"\)/);
+  assert.match(renderer, /<LocalCodexWorkspace bridge=\{props\.bridge\}/);
+  assert.match(renderer, /type ProductionRendererMode = "detecting" \| "local-codex" \| "full"/);
+  assert.match(renderer, /if \(mode === "local-codex"\) return <LocalCodexWorkspace/);
+  assert.match(renderer, /if \(mode === "full"\) return <Suspense[^;]+<FullProductionRenderer/);
   assert.match(workspace, /ConversationSidebar/);
   assert.match(workspace, /OnboardingCharacter/);
+  assert.match(workspace, /editorMode="plain"/);
   assert.match(workspace, /runLocalInferenceText\(/);
   assert.match(workspace, /LocalCodexModelSelector/);
   assert.match(workspace, /modelId: activeAgent\.modelId, reasoningEffort: activeAgent\.reasoningEffort/);

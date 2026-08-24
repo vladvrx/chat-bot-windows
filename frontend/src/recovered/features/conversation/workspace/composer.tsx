@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent, type FormEvent, type ReactNode } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { COMPOSER_ATTACHMENT_LIMIT, attachmentBasename, formatAttachmentBytes, inferAttachmentKind, isComposerDraftEmpty, type ComposerDraft, type DraftAttachment } from "./model";
 import { useVoiceSession, VoiceWaveform, type VoiceTranscriber } from "./voice";
 import { ComposerReplyPill, replyComposerPlaceholder, type ComposerReplyTarget } from "./reply-preview";
-import { PromptRichTextEditor, type PromptEditorControls, type PromptEditorProviders } from "./rich-text-editor";
+import type { PromptEditorControls, PromptEditorProviders } from "./rich-text-editor";
 import { SandIcon, SandIconButton } from "../../../ui/sand-kit-primitives";
 import { SandSpinner } from "../../../ui/sand-status-primitives";
 
@@ -19,6 +19,11 @@ const PROMPT_SEND_CLASS = "sand-prompt-send sand-2lah0s sand-mak4db sand-1tc92z3
 const COMPOSER_GLYPH_VISIBLE_CLASS = "sand-1hc1fzr sand-3oybdh";
 const COMPOSER_GLYPH_HIDDEN_CLASS = "sand-g01cxk sand-1a33avv";
 const RECORDING_CHIP_CLASS = "sand-recording-chip sand-9f619 sand-3nfvp2 sand-pkkfsy sand-1th6cxs sand-f6zju3 sand-16b7oty sand-cnij5n sand-o7x2bt sand-2lah0s sand-c342km sand-ng3xce sand-1i4c3av sand-i07v4r sand-1kj6vsg sand-1ypdohk sand-1k57tk5 sand-784prv sand-1t137rt sand-9v5kkp sand-1uczgqu sand-1725o6r sand-omy3lu";
+
+const PromptRichTextEditor = lazy(async () => {
+  const module = await import("./rich-text-editor");
+  return { default: module.PromptRichTextEditor };
+});
 
 function ComposerGlyph({ name, hidden = false }: { readonly name: "mic" | "arrow-up"; readonly hidden?: boolean }) {
   return <SandIcon className={hidden ? COMPOSER_GLYPH_HIDDEN_CLASS : COMPOSER_GLYPH_VISIBLE_CLASS} name={name} size="sm" style={{ lineHeight: 1 }} variant="filled" />;
@@ -47,6 +52,7 @@ export interface ConversationComposerProps {
   sendButtonAppearance?: "default" | "chatgpt";
   leadingAccessory?: ReactNode;
   centerControl?: ReactNode;
+  editorMode?: "rich" | "plain";
 }
 
 function ChatGptSendGlyph() {
@@ -77,14 +83,17 @@ export function selectComposerFiles(files: readonly File[], existingCount: numbe
   return files.slice(0, remaining);
 }
 
-export function ConversationComposer({ acceptedSendGeneration = 0, draft, disabled = false, notice, placeholder = "Ask anything, or drop a file.", transcribeAudio, onChange, onClearReplyTarget, onRemoveAttachment, onStageFiles, onSubmit, replyTarget, editorProviders, scopeKey, sendButtonAppearance = "default", leadingAccessory, centerControl }: ConversationComposerProps) {
+export function ConversationComposer({ acceptedSendGeneration = 0, draft, disabled = false, notice, placeholder = "Ask anything, or drop a file.", transcribeAudio, onChange, onClearReplyTarget, onRemoveAttachment, onStageFiles, onSubmit, replyTarget, editorProviders, scopeKey, sendButtonAppearance = "default", leadingAccessory, centerControl, editorMode = "rich" }: ConversationComposerProps) {
   const fileInput = useRef<HTMLInputElement>(null);
+  const plainEditor = useRef<HTMLTextAreaElement>(null);
   const editorControls = useRef<PromptEditorControls | null>(null);
   const dragDepth = useRef(0);
   const [isDragOver, setIsDragOver] = useState(false);
   const draftRef = useRef(draft);
+  const onChangeRef = useRef(onChange);
   const hasPayload = !isComposerDraftEmpty(draft);
   draftRef.current = draft;
+  onChangeRef.current = onChange;
   const voiceOptions = useMemo(() => ({ transcribe: transcribeAudio }), [transcribeAudio]);
   const voice = useVoiceSession(voiceOptions, scopeKey);
   const voiceBusy = voice.isRecording || voice.isProcessing || voice.isActivating;
@@ -92,26 +101,37 @@ export function ConversationComposer({ acceptedSendGeneration = 0, draft, disabl
   const atLimit = draft.attachments.length >= COMPOSER_ATTACHMENT_LIMIT;
 
   useEffect(() => voice.controller.onFinal((text) => {
+    if (editorMode === "plain") {
+      const current = draftRef.current;
+      const separator = current.prompt.length > 0 && !/\s$/.test(current.prompt) && !/^\s/.test(text) ? " " : "";
+      onChangeRef.current({ ...current, prompt: `${current.prompt}${separator}${text}`, richText: undefined });
+      const focusPlainEditor = () => plainEditor.current?.focus();
+      if (typeof requestAnimationFrame === "function") requestAnimationFrame(focusPlainEditor);
+      else focusPlainEditor();
+      return;
+    }
     editorControls.current?.insertText(text);
     const focusEditor = () => editorControls.current?.focus();
     if (typeof requestAnimationFrame === "function") requestAnimationFrame(focusEditor);
     else focusEditor();
-  }), [voice.controller]);
+  }), [editorMode, voice.controller]);
 
   useEffect(() => {
     if (disabled && voiceBusy) voice.handleCancelClick();
   }, [disabled, voiceBusy, voice.handleCancelClick]);
 
   useEffect(() => {
-    if (acceptedSendGeneration > 0) editorControls.current?.clear();
-  }, [acceptedSendGeneration]);
+    if (acceptedSendGeneration <= 0) return;
+    if (editorMode === "plain") plainEditor.current?.focus();
+    else editorControls.current?.clear();
+  }, [acceptedSendGeneration, editorMode]);
 
   const cancelVoiceAndRefocus = useCallback(() => {
     voice.handleCancelClick();
-    const focusEditor = () => editorControls.current?.focus();
+    const focusEditor = () => editorMode === "plain" ? plainEditor.current?.focus() : editorControls.current?.focus();
     if (typeof requestAnimationFrame === "function") requestAnimationFrame(focusEditor);
     else focusEditor();
-  }, [voice.handleCancelClick]);
+  }, [editorMode, voice.handleCancelClick]);
 
   const receiveEditorControls = useCallback((controls: PromptEditorControls | null) => {
     editorControls.current = controls;
@@ -166,6 +186,19 @@ export function ConversationComposer({ acceptedSendGeneration = 0, draft, disabl
     if (canSend) void onSubmit();
   };
 
+  const onPlainEditorKeyDown = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      if (voiceBusy) cancelVoiceAndRefocus();
+      else plainEditor.current?.blur();
+      return;
+    }
+    if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+      event.preventDefault();
+      if (canSend) void onSubmit();
+    }
+  };
+
   return (
     <form className="sand-prompt-form" onSubmit={submit}>
       <div className="sand-prompt-shell" data-expanded={hasPayload || undefined} onDragEnter={onDragEnter} onDragLeave={onDragLeave} onDragOver={onDragOver} onDrop={onDrop}>
@@ -186,7 +219,18 @@ export function ConversationComposer({ acceptedSendGeneration = 0, draft, disabl
             })}
           </div>
         ) : null}
-        <PromptRichTextEditor
+        {editorMode === "plain" ? <textarea
+          aria-label="Prompt"
+          aria-multiline="true"
+          className="sand-prompt-field sand-prompt-field--plain"
+          disabled={disabled}
+          onChange={(event) => onChange({ ...draftRef.current, prompt: event.currentTarget.value, richText: undefined })}
+          onKeyDown={onPlainEditorKeyDown}
+          placeholder={replyTarget == null ? placeholder : replyComposerPlaceholder(replyTarget.preview)}
+          ref={plainEditor}
+          rows={1}
+          value={draft.prompt}
+        /> : <Suspense fallback={<textarea aria-label="Prompt" className="sand-prompt-field" disabled placeholder={placeholder} rows={1} />}><PromptRichTextEditor
           canSubmit={canSend}
           clearGeneration={acceptedSendGeneration}
           disabled={disabled}
@@ -203,7 +247,7 @@ export function ConversationComposer({ acceptedSendGeneration = 0, draft, disabl
           providers={editorProviders}
           richText={draft.richText}
           scopeKey={scopeKey}
-        />
+        /></Suspense>}
         {voice.isRecording || voice.isActivating ? <span aria-live="polite" className="sand-prompt-voice-status" role="status">Listening…</span> : null}
         <div className="sand-prompt-actions-row" data-has-center-control={centerControl == null ? undefined : true}>
           <span className="sand-prompt-actions-leading">

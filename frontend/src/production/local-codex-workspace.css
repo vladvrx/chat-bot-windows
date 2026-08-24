@@ -87,6 +87,67 @@
 .local-codex-empty h1 { margin: 18px 0 4px; font-size: 24px; font-weight: 620; letter-spacing: -.025em; }
 .local-codex-empty p { margin: 0 0 18px; color: var(--cursor-text-secondary); }
 
+.local-codex-transcript {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 0;
+  padding: 28px max(24px, calc((100% - 700px) / 2));
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+.local-codex-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+}
+
+.local-codex-message--user { justify-content: flex-end; }
+.local-codex-message > .sand-agent-avatar { flex: 0 0 auto; margin-top: 3px; }
+.local-codex-message__content { display: flex; align-items: flex-end; gap: 5px; max-width: min(78%, 620px); min-width: 0; }
+.local-codex-message--user .local-codex-message__content { flex-direction: row-reverse; }
+.local-codex-message__bubble { min-width: 0; color: var(--cursor-text-primary); line-height: 1.55; overflow-wrap: anywhere; white-space: pre-wrap; }
+.local-codex-message--user .local-codex-message__bubble { padding: 10px 13px; background: var(--cursor-bg-secondary); border-radius: 17px; }
+.local-codex-message--assistant .local-codex-message__bubble { padding: 7px 2px; }
+
+.local-codex-message__copy {
+  display: grid;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  color: var(--cursor-text-tertiary);
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  opacity: 0;
+  place-items: center;
+}
+
+.local-codex-message:hover .local-codex-message__copy,
+.local-codex-message__copy:focus-visible { opacity: 1; }
+.local-codex-message__copy:hover { color: var(--cursor-text-primary); background: var(--cursor-bg-secondary); }
+
+.local-codex-thinking {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 8px 10px;
+}
+
+.local-codex-thinking span { width: 5px; height: 5px; background: var(--cursor-text-tertiary); border-radius: 50%; animation: local-codex-thinking 1.05s infinite ease-in-out; }
+.local-codex-thinking span:nth-child(2) { animation-delay: .12s; }
+.local-codex-thinking span:nth-child(3) { animation-delay: .24s; }
+
+@keyframes local-codex-thinking {
+  0%, 70%, 100% { opacity: .35; transform: translateY(0); }
+  35% { opacity: 1; transform: translateY(-2px); }
+}
+
 .local-codex-shell .sand-chat-input-dock { padding-bottom: 12px; }
 .local-codex-shell .sand-prompt-shell { min-height: 100px; padding: 10px; border-radius: 20px; }
 .local-codex-shell .sand-prompt-field { min-height: 49px; padding: 5px 6px 0; }

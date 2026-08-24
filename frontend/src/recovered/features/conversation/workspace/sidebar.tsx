@@ -83,7 +83,7 @@ export interface ConversationSidebarProps {
   isPreviewEnabled?: boolean;
 }
 
-export type SidebarAgent = ConversationAgentSummary & { description?: string; hasUnread?: boolean; isGroup?: boolean; raw?: { readonly isSharedRoom?: boolean } };
+export type SidebarAgent = ConversationAgentSummary & { description?: string; hasUnread?: boolean; isGroup?: boolean; avatarStatic?: boolean; raw?: { readonly isSharedRoom?: boolean } };
 
 export interface SidebarSelectionActionsProps {
   selectedAgentIds: readonly string[];
@@ -111,7 +111,7 @@ function activityLabel(agent: SidebarAgent): "Needs attention" | "Unread activit
 }
 
 function renderPreviewAvatar(agent: SidebarAgent, avatar: AgentPreviewAvatarProjection): ReactNode {
-  return <AgentAvatar agentId={avatar.agentId} kind={avatar.kind} memberIds={agent.memberIds} dataUrl={avatar.dataUrl} color={avatar.color} shape={avatar.shape} currentActivity={agent.currentActivity} isComposingMessage={agent.isComposingMessage} isRunning={agent.isRunning} awaitingUserResponse={agent.awaitingUserResponse} size={avatar.size} />;
+  return <AgentAvatar agentId={avatar.agentId} kind={avatar.kind} memberIds={agent.memberIds} dataUrl={avatar.dataUrl} color={avatar.color} shape={avatar.shape} currentActivity={agent.currentActivity} isComposingMessage={agent.isComposingMessage} isRunning={agent.isRunning} awaitingUserResponse={agent.awaitingUserResponse} isStatic={agent.avatarStatic === true && !agent.isRunning} size={avatar.size} />;
 }
 
 function renderPreviewStatus({ ariaLabel, marker, presence }: { readonly ariaLabel: string | undefined; readonly marker: string | null; readonly presence: string | null }): ReactNode {
@@ -266,7 +266,7 @@ export function AgentSidebarItem({ agent, active, now, isCollapsed = false, isSe
     type="button"
   >
     <span className="sand-agent-item__avatar">
-      <span aria-hidden="true"><AgentAvatar agentId={agent.id} kind={agent.isSharedRoom === true || agent.raw?.isSharedRoom === true ? "shared-room" : agent.isGroup === true ? "group" : "agent"} memberIds={agent.memberIds} dataUrl={agent.avatarDataUrl} color={agent.avatarColor} shape={agent.avatarShape} currentActivity={agent.currentActivity} isComposingMessage={agent.isComposingMessage} isRunning={agent.isRunning} awaitingUserResponse={agent.awaitingUserResponse} size="md" /></span>
+      <span aria-hidden="true"><AgentAvatar agentId={agent.id} kind={agent.isSharedRoom === true || agent.raw?.isSharedRoom === true ? "shared-room" : agent.isGroup === true ? "group" : "agent"} memberIds={agent.memberIds} dataUrl={agent.avatarDataUrl} color={agent.avatarColor} shape={agent.avatarShape} currentActivity={agent.currentActivity} isComposingMessage={agent.isComposingMessage} isRunning={agent.isRunning} awaitingUserResponse={agent.awaitingUserResponse} isStatic={agent.avatarStatic === true && !agent.isRunning} size="md" /></span>
       <SidebarAgentStatusCorner hasUnread={agent.hasUnread} isRunning={agent.isRunning} layout={rowLayout} waitingReason={agent.waitingReason} />
     </span>
     {isCollapsed ? null : <>

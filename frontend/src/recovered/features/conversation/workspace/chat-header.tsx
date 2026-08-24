@@ -10,7 +10,7 @@ import { AgentAvatar } from "./agent-avatar";
 // owned by the separate agent-info surface and is intentionally not mounted here.
 
 export interface ConversationAgentHeaderProps {
-  agent: Pick<RendererAgent, "id" | "name" | "isRunning" | "isComposingMessage" | "awaitingUserResponse" | "currentActivity" | "avatarDataUrl" | "avatarShape" | "avatarColor" | "isSharedRoom" | "memberIds"> & { isGroup?: boolean };
+  agent: Pick<RendererAgent, "id" | "name" | "isRunning" | "isComposingMessage" | "awaitingUserResponse" | "currentActivity" | "avatarDataUrl" | "avatarShape" | "avatarColor" | "isSharedRoom" | "memberIds"> & { isGroup?: boolean; avatarStatic?: boolean };
   isComputerActive: boolean;
   isInfoOpen: boolean;
   onToggleInfo(): void;
@@ -22,7 +22,7 @@ export interface ConversationAgentHeaderProps {
 export function ConversationAgentHeader({ agent, isComputerActive, isInfoOpen, onToggleInfo, onToggleSettings, sharedRoomTrigger, trailing }: ConversationAgentHeaderProps) {
   const avatarKind = agent.isSharedRoom === true ? "shared-room" : agent.isGroup === true ? "group" : "agent";
   const identity = <>
-    <span className="sand-chat-header__avatar"><AgentAvatar agentId={agent.id} kind={avatarKind} memberIds={agent.memberIds} dataUrl={agent.avatarDataUrl} color={agent.avatarColor} shape={agent.avatarShape} currentActivity={agent.currentActivity} isComposingMessage={agent.isComposingMessage} isRunning={agent.isRunning} awaitingUserResponse={agent.awaitingUserResponse} size="md" /></span>
+    <span className="sand-chat-header__avatar"><AgentAvatar agentId={agent.id} kind={avatarKind} memberIds={agent.memberIds} dataUrl={agent.avatarDataUrl} color={agent.avatarColor} shape={agent.avatarShape} currentActivity={agent.currentActivity} isComposingMessage={agent.isComposingMessage} isRunning={agent.isRunning} awaitingUserResponse={agent.awaitingUserResponse} isStatic={agent.avatarStatic === true && !agent.isRunning} size="md" /></span>
     <span id="sand-conversation-heading">{agent.name}</span>
     {agent.isRunning ? <small>Working</small> : null}
   </>;
