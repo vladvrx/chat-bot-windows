@@ -1,55 +1,43 @@
 # Provenance
 
-The reconstruction is based on the public macOS arm64 and Windows x64 release
-artifacts. The macOS identity is:
+This repository (`vladvrx/chat-bot-windows`) is an unofficial, evidence-based reconstruction of the publicly distributed **Grok Bot 0.18.0** desktop application (Anysphere / Cursor).
 
-- Product: Grok Bot
-- Version: 0.18.0
-- Upstream bundle ID: `com.anysphere.sand`
-- Electron framework: 42.1.0
-- DMG URL: `https://downloads.cursor.com/grokbot/stable/darwin-arm64/0.18.0/Grok_Bot_0.18.0.dmg`
-- DMG SHA-256: `a253ccd8aab01e083f9812a0264354c5034d8ba7f0610bbb557e82ae77d203eb`
-- Original `app.asar` SHA-256: `6665408168466f9cacc6087e917890c17f59d2e2e9c2404a5c4a59ad79c1de58`
+## Upstream artifacts used
 
-The repository preserves the original macOS artifact above and the matching
-Windows x64 installer through Git LFS. The Windows artifact identity is:
+**macOS arm64**
+- Product: Grok Bot 0.18.0
+- Bundle ID: `com.anysphere.sand`
+- Electron: 42.1.0
+- DMG: https://downloads.cursor.com/grokbot/stable/darwin-arm64/0.18.0/Grok_Bot_0.18.0.dmg
+- SHA-256: `a253ccd8aab01e083f9812a0264354c5034d8ba7f0610bbb557e82ae77d203eb`
 
-- Installer URL: `https://downloads.cursor.com/grokbot/stable/win32-x64/0.18.0/Grok_Bot_0.18.0_Setup.exe`
-- Installer SHA-256: `464079a15ef5fa8b61ccea8fffcc78f63cfcf6df65fb0ad5e725d8b95f7e437e`
-- Original Windows `app.asar` SHA-256: `38e85c0e5042c0257db7925e1e55709d6d155d90d92fe26ad654127d509766e0`
-- Original Windows shell SHA-256: `86719c9dcbfc580b7bc29ece62302401a7622ae577e2cff42b4c525db674f1ca`
-- Preservation manifest: `research-archives/original/0.18.0/artifacts.json`
+**Windows x64**
+- Installer: https://downloads.cursor.com/grokbot/stable/win32-x64/0.18.0/Grok_Bot_0.18.0_Setup.exe
+- SHA-256: `464079a15ef5fa8b61ccea8fffcc78f63cfcf6df65fb0ad5e725d8b95f7e437e`
+- Additional hashes recorded in `research-archives/original/0.18.0/artifacts.json`
 
-The original macOS application was Developer ID signed and notarized by
-Anysphere Incorporated. Reconstructed macOS builds use a different bundle ID
-and an ad-hoc signature. Reconstructed Windows builds remove the original
-Authenticode certificate payload and replace the executable version identity.
-Neither package retains or claims the upstream signature.
+The original installers are preserved via Git LFS for research continuity only. They remain subject to Anysphere’s terms.
 
-The shipped renderer contained optimized production bundles, not the authored
-frontend source or source maps. The readable `frontend/` tree is therefore a
-partial evidence-backed reconstruction, while packaged builds retain the pinned
-renderer and apply only a narrow, hash-recorded settings transform.
+## Reconstruction approach
 
-No upstream source-code license is implied. Do not present reconstructed
-material as original source or an official build, and complete an independent
-rights review before public redistribution.
+- Runtime code (Electron main, host, coordinator, protocol, etc.) was reconstructed from inspectable artifacts (emitted code, strings, IPC contracts, runtime behavior).
+- The shipped minified renderer is retained as the UI baseline in packaged builds; only narrow, hash-recorded transforms are applied.
+- `frontend/` is a partial, evidence-backed readable reconstruction — **not** the original authored source.
+- Reconstructed builds use a distinct identity and do not claim the original code signature or notarization.
 
-## Evidence-only reconstruction rule
+## Licensing statement
 
-The immutable release is the product specification. Recovered source may express
-only behavior supported by at least one inspectable artifact anchor: emitted code
-or source-path markers, extracted capsules/source maps, shipped strings/assets/CSS,
-renderer DOM signatures, IPC/RPC contracts, or repeatable observation of the
-shipped runtime.
+**No upstream source-code license is implied or granted.**
 
-This rule is especially strict for the renderer. Do not invent or redesign a
-screen, route, control, label, selector, state, or interaction to fill an evidence
-gap. A clean abstraction or test seam is acceptable only when it preserves
-artifact-derived semantics and does not add product behavior. When evidence is
-incomplete, record the uncertainty and leave the feature unmapped or
-evidence-only instead of guessing.
+This material is derived from a proprietary binary.  
+Anyone who publishes, forks, or distributes this repository or resulting binaries must perform their own independent legal review of:
 
-Every UI-facing recovery must identify its artifact anchor in its evidence
-catalog, focused test, or coverage note. Passing typecheck/build alone is not
-proof of provenance; speculative behavior is a release-blocking defect.
+- Copyright
+- Trademark
+- Reverse-engineering / decompilation restrictions in the original EULA / ToS
+- Third-party dependency licenses
+- OpenAI / Codex terms (when using the Codex router)
+
+## Evidence-only rule
+
+Recovered source may only express behavior supported by at least one inspectable artifact anchor. Speculative or invented product behavior is not permitted.
