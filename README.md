@@ -13,7 +13,7 @@ application.
 
 It also adds a few practical experiments:
 
-- an inference router for Cursor, Claude Code, Codex, and OpenRouter;
+- an inference router for Codex;
 - Grok Bot plugin/MCP tools across the routed providers;
 - local usage tracking for routed inference;
 - an optional local Docker sandbox in place of the remote box; and
